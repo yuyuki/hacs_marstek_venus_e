@@ -8,9 +8,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
-from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, CONF_BLE_MAC, CONF_TIMEOUT
 from .udp_client import MarstekUDPClient

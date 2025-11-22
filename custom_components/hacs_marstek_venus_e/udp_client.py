@@ -56,11 +56,8 @@ class MarstekUDPClient:
             payload["params"] = params
         
         max_attempts = 2
-        attempt = 0
-        while True:
-            attempt += 1
+        for attempt in range(1, max_attempts + 1):
             try:
-                # Create UDP socket
                 loop = asyncio.get_event_loop()
                 transport, protocol = await asyncio.wait_for(
                     loop.create_datagram_endpoint(
@@ -70,45 +67,39 @@ class MarstekUDPClient:
                     timeout=self.timeout,
                 )
                 
-                # Send request
                 transport.sendto(json.dumps(payload).encode("utf-8"))
                 
-                # Wait for response
                 response = await asyncio.wait_for(
                     protocol.get_response(), timeout=self.timeout
                 )
                 
-                # Clean up
                 transport.close()
                 
-                # Parse and return response
                 if "error" in response:
                     raise Exception(f"RPC Error: {response['error']}")
-
+                
                 return response.get("result", {})
-
-            except asyncio.TimeoutError as te:
+                
+            except asyncio.TimeoutError:
                 _LOGGER.warning(
-                    "Timeout while waiting for response (attempt %s/%s) for method '%s' to %s:%s",
+                    "Timeout (attempt %d/%d) for method '%s' to %s:%d",
                     attempt,
                     max_attempts,
                     method,
                     self.ip_address,
                     self.port,
                 )
-                # If we haven't exhausted attempts, retry once
                 if attempt < max_attempts:
-                    _LOGGER.debug("Retrying %s (attempt %s)", method, attempt + 1)
-                    # ensure transport is closed before retry
+                    _LOGGER.debug("Retrying %s...", method)
                     try:
                         transport.close()
                     except Exception:
                         pass
                     continue
-                _LOGGER.error("Request timeout to %s:%s for method %s", self.ip_address, self.port, method)
+                _LOGGER.error("Request timeout to %s:%d for method %s", self.ip_address, self.port, method)
                 raise
             except Exception as err:
-                _LOGGER.error("Error communicating with device: %s", err)
+                _LOGGER.error("Error communicating with %s:%d - %s", self.ip_address, self.port, err)
                 raise
 
     async def get_realtime_data(self) -> dict[str, Any]:
