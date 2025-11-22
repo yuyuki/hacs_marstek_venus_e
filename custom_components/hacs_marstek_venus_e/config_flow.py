@@ -66,7 +66,7 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Attempt automatic discovery
         try:
             _LOGGER.debug("Starting Marstek device discovery...")
-            self.discovered_devices = await MarstekUDPClient.discover(timeout=3.0, port=30000)
+            self.discovered_devices = await MarstekUDPClient.discover(timeout=15.0, port=30000)
             _LOGGER.debug("Found %d device(s)", len(self.discovered_devices))
         except Exception as err:
             _LOGGER.error("Device discovery failed: %s", err)
@@ -93,6 +93,7 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             selected = user_input.get(CONF_IP_ADDRESS)
             port = user_input.get(CONF_PORT, 30000)
+            ble_mac = user_input.get(CONF_BLE_MAC, "")
 
             _LOGGER.debug("User selected device value: %s (port %s)", selected, port)
 
@@ -106,33 +107,28 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not ip_address:
                 errors["base"] = "no_device_selected"
             else:
-                # Validate connection
-                try:
-                    _LOGGER.debug("Attempting connection test to %s:%s", ip_address, port)
-                    client = MarstekUDPClient(
-                        ip_address=ip_address,
-                        port=port,
-                        timeout=15.0,
-                    )
-                    await client.get_realtime_data()
-                    _LOGGER.debug("Successfully connected to device at %s", ip_address)
+                # For discovered devices, extract BLE MAC from the discovery response
+                # Since the device only responds to broadcast, we can't verify unicast connection
+                # But if it responded to discovery, it's reachable
+                for disc_ip, disc_port, payload in self.discovered_devices:
+                    if disc_ip == ip_address:
+                        device_info = payload.get("result", {})
+                        if not ble_mac:
+                            ble_mac = device_info.get("ble_mac", "")
+                        break
+                
+                # Check if already configured
+                await self.async_set_unique_id(ip_address)
+                self._abort_if_unique_id_configured()
 
-                except Exception as err:
-                    _LOGGER.exception("Failed to connect to device at %s", ip_address)
-                    errors["base"] = "cannot_connect"
-                else:
-                    # Check if already configured
-                    await self.async_set_unique_id(ip_address)
-                    self._abort_if_unique_id_configured()
-
-                    return self.async_create_entry(
-                        title=f"Marstek Venus E ({ip_address})",
-                        data={
-                            CONF_IP_ADDRESS: ip_address,
-                            CONF_PORT: port,
-                            CONF_BLE_MAC: user_input.get(CONF_BLE_MAC, ""),
-                        },
-                    )
+                return self.async_create_entry(
+                    title=f"Marstek Venus E ({ip_address})",
+                    data={
+                        CONF_IP_ADDRESS: ip_address,
+                        CONF_PORT: port,
+                        CONF_BLE_MAC: ble_mac,
+                    },
+                )
         
         # Build device list for selection
         device_options: dict[str, str] = {}
@@ -140,8 +136,9 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             for ip, port, payload in self.discovered_devices:
                 device_info = payload.get("result", {})
                 device_name = device_info.get("device", "Unknown")
-                ble_mac = device_info.get("ble_mac", "")
-                label = f"{device_name} ({ip}) - MAC: {ble_mac}"
+                src = payload.get("src", "Unknown")
+                # Format: IP - Device Name [src]
+                label = f"{ip} - {device_name} [{src}]"
                 device_options[ip] = label
         
         # Add manual entry option
@@ -170,22 +167,26 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_manual_ip(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle manual IP entry when user chooses to enter an IP manually."""
+        """Handle manual IP entry when user chooses to enter an IP manually.
+        
+        Note: Connection validation is skipped for manual entry since the device
+        only responds to UDP broadcasts, not to unicast requests. The connection
+        will be verified when the integration attempts to retrieve data after
+        configuration is saved.
+        """
         errors: dict[str, str] = {}
 
         if user_input is not None:
             ip_address = user_input.get(CONF_IP_ADDRESS)
             port = user_input.get(CONF_PORT, 30000)
+            ble_mac = user_input.get(CONF_BLE_MAC, "")
 
             _LOGGER.debug("Manual IP provided: %s:%s", ip_address, port)
 
-            try:
-                client = MarstekUDPClient(ip_address=ip_address, port=port, timeout=15.0)
-                await client.get_realtime_data()
-            except Exception:
-                _LOGGER.exception("Failed to connect to manually provided IP %s", ip_address)
-                errors["base"] = "cannot_connect"
+            if not ip_address:
+                errors["base"] = "invalid_ip"
             else:
+                # Check if already configured
                 await self.async_set_unique_id(ip_address)
                 self._abort_if_unique_id_configured()
 
@@ -194,7 +195,7 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data={
                         CONF_IP_ADDRESS: ip_address,
                         CONF_PORT: port,
-                        CONF_BLE_MAC: user_input.get(CONF_BLE_MAC, ""),
+                        CONF_BLE_MAC: ble_mac,
                     },
                 )
 

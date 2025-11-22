@@ -46,14 +46,16 @@ class MarstekUDPClient:
         """
         request_id = self._get_next_id()
         
+        # Marstek uses simplified JSON-RPC format (no jsonrpc field)
         payload = {
-            "jsonrpc": "2.0",
-            "method": method,
             "id": request_id,
+            "method": method,
         }
         
         if params:
             payload["params"] = params
+        
+        _LOGGER.debug("Sending request to %s:%d: %s", self.ip_address, self.port, payload)
         
         max_attempts = 2
         for attempt in range(1, max_attempts + 1):
@@ -68,6 +70,7 @@ class MarstekUDPClient:
                 )
                 
                 transport.sendto(json.dumps(payload).encode("utf-8"))
+                _LOGGER.debug("Sent %s request to %s:%d", method, self.ip_address, self.port)
                 
                 response = await asyncio.wait_for(
                     protocol.get_response(), timeout=self.timeout
@@ -76,9 +79,14 @@ class MarstekUDPClient:
                 transport.close()
                 
                 if "error" in response:
-                    raise Exception(f"RPC Error: {response['error']}")
+                    error = response.get("error", {})
+                    error_msg = f"{error.get('message', 'Unknown error')} (code: {error.get('code')})"
+                    _LOGGER.error("RPC Error from %s:%d: %s", self.ip_address, self.port, error_msg)
+                    raise Exception(f"RPC Error: {error_msg}")
                 
-                return response.get("result", {})
+                result = response.get("result", {})
+                _LOGGER.debug("Received response from %s:%d: %s", self.ip_address, self.port, result)
+                return result
                 
             except asyncio.TimeoutError:
                 _LOGGER.warning(
@@ -102,21 +110,62 @@ class MarstekUDPClient:
                 _LOGGER.error("Error communicating with %s:%d - %s", self.ip_address, self.port, err)
                 raise
 
+    async def get_device_info(self) -> dict[str, Any]:
+        """Get device information.
+        
+        Returns:
+            Dictionary containing device info
+        """
+        return await self._send_request("Marstek.GetDevice", {"ble_mac": "0"})
+
+    async def get_battery_status(self) -> dict[str, Any]:
+        """Get battery status.
+        
+        Returns:
+            Dictionary containing battery status
+        """
+        return await self._send_request("Bat.GetStatus", {"id": 0})
+
+    async def get_wifi_status(self) -> dict[str, Any]:
+        """Get WiFi connection status.
+        
+        Returns:
+            Dictionary containing WiFi status
+        """
+        return await self._send_request("Wifi.GetStatus", {"id": 0})
+
+    async def get_energy_system_status(self) -> dict[str, Any]:
+        """Get energy system status.
+        
+        Returns:
+            Dictionary containing energy system status
+        """
+        return await self._send_request("ES.GetStatus", {"id": 0})
+
+    async def get_energy_system_mode(self) -> dict[str, Any]:
+        """Get operating mode.
+        
+        Returns:
+            Dictionary containing mode information
+        """
+        return await self._send_request("ES.GetMode", {"id": 0})
+
+    # Keep old methods for backwards compatibility
     async def get_realtime_data(self) -> dict[str, Any]:
-        """Get real-time data from device.
+        """Get real-time data from device (alias for get_energy_system_status).
         
         Returns:
             Dictionary containing real-time data
         """
-        return await self._send_request("get_realtime_data")
+        return await self.get_energy_system_status()
 
     async def get_battery_info(self) -> dict[str, Any]:
-        """Get battery information.
+        """Get battery information (alias for get_battery_status).
         
         Returns:
             Dictionary containing battery info
         """
-        return await self._send_request("get_battery_info")
+        return await self.get_battery_status()
 
     async def set_mode(self, mode: str) -> dict[str, Any]:
         """Set operating mode.
@@ -127,7 +176,7 @@ class MarstekUDPClient:
         Returns:
             Response from device
         """
-        return await self._send_request("set_mode", {"mode": mode})
+        return await self._send_request("ES.SetMode", {"mode": mode, "id": 0})
 
     async def set_manual_schedule(
         self,
@@ -152,8 +201,9 @@ class MarstekUDPClient:
             Response from device
         """
         return await self._send_request(
-            "set_manual_schedule",
+            "ES.SetSchedule",
             {
+                "id": 0,
                 "time_num": time_num,
                 "start_time": start_time,
                 "end_time": end_time,
@@ -174,8 +224,8 @@ class MarstekUDPClient:
             Response from device
         """
         return await self._send_request(
-            "set_passive_mode",
-            {"power": power, "cd_time": cd_time},
+            "ES.SetPassiveMode",
+            {"id": 0, "power": power, "cd_time": cd_time},
         )
 
     async def get_schedule(self) -> dict[str, Any]:
@@ -184,41 +234,21 @@ class MarstekUDPClient:
         Returns:
             Current schedule data
         """
-        return await self._send_request("get_schedule")
+        return await self._send_request("ES.GetSchedule", {"id": 0})
 
     @staticmethod
-    async def discover(timeout: float = 3.0, port: int = 30000) -> list[tuple[str, int, dict[str, Any]]]:
+    async def discover(timeout: float = 15.0, port: int = 30000) -> list[tuple[str, int, dict[str, Any]]]:
         """Discover Marstek devices on the local network via UDP broadcast.
 
         Sends a JSON-RPC discovery probe as a UDP broadcast and collects
         any JSON responses received within `timeout` seconds.
 
         Returns a list of tuples: (ip, port, parsed_json_response).
+        Deduplicates responses by IP address and filters out invalid responses.
         """
-        loop = asyncio.get_event_loop()
-
-        class _DiscoveryProtocol(asyncio.DatagramProtocol):
-            def __init__(self):
-                self.responses: list[tuple[str, int, dict[str, Any]]] = []
-                self.transport = None
-
-            def connection_made(self, transport):
-                self.transport = transport
-
-            def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
-                try:
-                    text = data.decode("utf-8", errors="replace")
-                    _LOGGER.debug("Discovery datagram received from %s: %s", addr, text)
-                    payload = json.loads(text)
-                except Exception:
-                    _LOGGER.debug("Non-JSON discovery response from %s: %s", addr, data)
-                    return
-
-                self.responses.append((addr[0], addr[1], payload))
-
-            def error_received(self, exc: Exception) -> None:
-                _LOGGER.debug("Discovery protocol error: %s", exc)
-
+        import socket
+        import time
+        
         probe = {
             "id": 0,
             "method": "Marstek.GetDevice",
@@ -226,60 +256,91 @@ class MarstekUDPClient:
                 "ble_mac": "0"
             }
         }
-
-        # Create a UDP socket with broadcast enabled and send probe
-        import socket
-
-        transport = None
-        protocol = None
-        sock = None
+        
+        probe_json = json.dumps(probe)
+        probe_bytes = probe_json.encode("utf-8")
+        
+        # Create socket bound to the discovery port (important!)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        
+        if hasattr(socket, "SO_REUSEPORT"):
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            sock.setblocking(False)
-            sock.bind(("0.0.0.0", 0))
-
-            transport, protocol = await asyncio.wait_for(
-                loop.create_datagram_endpoint(
-                    lambda: _DiscoveryProtocol(),
-                    sock=sock,
-                ),
-                timeout=1.0,
-            )
-
-            # Send broadcast probe
-            _LOGGER.debug("Sending discovery probe to %s:%s -> %s", "255.255.255.255", port, probe)
-            try:
-                transport.sendto(json.dumps(probe).encode("utf-8"), ("255.255.255.255", port))
-            except Exception as exc_send:
-                _LOGGER.exception("Failed to send discovery probe: %s", exc_send)
-
-            # Wait for responses for the specified timeout
-            _LOGGER.debug("Waiting %s seconds for discovery responses...", timeout)
-            await asyncio.sleep(timeout)
-
-            results = list(protocol.responses) if protocol else []
-            _LOGGER.debug("Discovery finished, found %d response(s)", len(results))
-            for r in results:
-                _LOGGER.debug("Discovery response: %s", r)
-
-            return results
-
+            # Bind to the discovery port so device responses are received
+            sock.bind(("", port))
+            _LOGGER.debug("Bound to UDP port %d for discovery responses", port)
+        except OSError as err:
+            _LOGGER.warning("Could not bind to UDP port %d: %s - discovery may fail", port, err)
+        
+        sock.settimeout(1.0)  # Short timeout for individual recv attempts
+        
+        responses: dict[str, tuple[str, int, dict[str, Any]]] = {}  # Use dict to deduplicate by IP
+        start_time = time.time()
+        last_broadcast = 0.0
+        
+        try:
+            _LOGGER.debug("Starting discovery with probe: %s", probe)
+            
+            # Broadcast repeatedly every 2 seconds during the timeout window
+            while time.time() - start_time < timeout:
+                current_time = time.time()
+                
+                # Send broadcast every 2 seconds
+                if current_time - last_broadcast >= 2.0:
+                    try:
+                        sock.sendto(probe_bytes, ("255.255.255.255", port))
+                        _LOGGER.debug("Sent discovery probe to 255.255.255.255:%d", port)
+                        last_broadcast = current_time
+                    except Exception as exc_send:
+                        _LOGGER.warning("Failed to send discovery probe: %s", exc_send)
+                
+                # Try to receive responses (non-blocking with timeout)
+                try:
+                    data, addr = sock.recvfrom(4096)
+                    try:
+                        text = data.decode("utf-8", errors="replace")
+                        payload = json.loads(text)
+                        
+                        # Only keep valid responses with "result" field (filter out echoes)
+                        if "result" in payload:
+                            ip_addr = addr[0]
+                            # Deduplicate: keep only first response from each IP
+                            if ip_addr not in responses:
+                                _LOGGER.info("DISCOVERY: Found device at %s:%d - %s", addr[0], addr[1], payload)
+                                responses[ip_addr] = (addr[0], addr[1], payload)
+                            else:
+                                _LOGGER.debug("Ignoring duplicate response from %s", ip_addr)
+                        else:
+                            _LOGGER.debug("Ignoring response without 'result' field from %s: %s", addr[0], payload)
+                    except json.JSONDecodeError as je:
+                        _LOGGER.debug("Non-JSON discovery response from %s: %s", addr, data[:100])
+                    except Exception as e:
+                        _LOGGER.debug("Error parsing discovery response from %s: %s", addr, e)
+                        
+                except socket.timeout:
+                    # Normal - no response yet, continue broadcasting
+                    continue
+                except Exception as e:
+                    _LOGGER.debug("Socket error during discovery: %s", e)
+                    continue
+            
+            # Convert deduped dict back to list
+            result = list(responses.values())
+            _LOGGER.debug("Discovery finished after %.1f seconds, found %d unique device(s)", 
+                         time.time() - start_time, len(result))
+            return result
+            
         except Exception as err:
             _LOGGER.exception("Discovery failed: %s", err)
             return []
         finally:
-            if transport:
-                try:
-                    transport.close()
-                except Exception:
-                    _LOGGER.debug("Error closing transport")
-            # If socket wasn't passed into transport (transport closed), ensure it's closed
             try:
-                if sock:
-                    sock.close()
+                sock.close()
             except Exception:
-                _LOGGER.debug("Error closing discovery socket")
+                pass
 
 
 class _UDPClientProtocol(asyncio.DatagramProtocol):
