@@ -195,9 +195,11 @@ class MarstekUDPClient:
 
             def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
                 try:
-                    payload = json.loads(data.decode("utf-8"))
+                    text = data.decode("utf-8", errors="replace")
+                    _LOGGER.debug("Discovery datagram received from %s: %s", addr, text)
+                    payload = json.loads(text)
                 except Exception:
-                    _LOGGER.debug("Non-JSON discovery response from %s", addr)
+                    _LOGGER.debug("Non-JSON discovery response from %s: %s", addr, data)
                     return
 
                 self.responses.append((addr[0], addr[1], payload))
@@ -234,27 +236,38 @@ class MarstekUDPClient:
             )
 
             # Send broadcast probe
-            transport.sendto(json.dumps(probe).encode("utf-8"), ("255.255.255.255", port))
+            _LOGGER.debug("Sending discovery probe to %s:%s -> %s", "255.255.255.255", port, probe)
+            try:
+                transport.sendto(json.dumps(probe).encode("utf-8"), ("255.255.255.255", port))
+            except Exception as exc_send:
+                _LOGGER.exception("Failed to send discovery probe: %s", exc_send)
 
             # Wait for responses for the specified timeout
+            _LOGGER.debug("Waiting %s seconds for discovery responses...", timeout)
             await asyncio.sleep(timeout)
 
-            results = list(protocol.responses)
+            results = list(protocol.responses) if protocol else []
+            _LOGGER.debug("Discovery finished, found %d response(s)", len(results))
+            for r in results:
+                _LOGGER.debug("Discovery response: %s", r)
 
             return results
 
         except Exception as err:
-            _LOGGER.debug("Discovery failed: %s", err)
+            _LOGGER.exception("Discovery failed: %s", err)
             return []
         finally:
             if transport:
-                transport.close()
+                try:
+                    transport.close()
+                except Exception:
+                    _LOGGER.debug("Error closing transport")
             # If socket wasn't passed into transport (transport closed), ensure it's closed
             try:
                 if sock:
                     sock.close()
             except Exception:
-                pass
+                _LOGGER.debug("Error closing discovery socket")
 
 
 class _UDPClientProtocol(asyncio.DatagramProtocol):

@@ -93,29 +93,39 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         
         if user_input is not None:
-            ip_address = user_input.get(CONF_IP_ADDRESS)
+            selected = user_input.get(CONF_IP_ADDRESS)
             port = user_input.get(CONF_PORT, 30000)
-            
+
+            _LOGGER.debug("User selected device value: %s (port %s)", selected, port)
+
+            # If user chose manual entry, present a dedicated form
+            if selected == "manual":
+                return await self.async_step_manual_ip()
+
+            # Otherwise selected should be an IP (from device_options) or direct input
+            ip_address = selected
+
             if not ip_address:
                 errors["base"] = "no_device_selected"
             else:
                 # Validate connection
                 try:
+                    _LOGGER.debug("Attempting connection test to %s:%s", ip_address, port)
                     client = MarstekUDPClient(
                         ip_address=ip_address,
                         port=port,
                     )
                     await client.get_realtime_data()
                     _LOGGER.debug("Successfully connected to device at %s", ip_address)
-                    
+
                 except Exception as err:
-                    _LOGGER.error("Failed to connect to device at %s: %s", ip_address, err)
+                    _LOGGER.exception("Failed to connect to device at %s", ip_address)
                     errors["base"] = "cannot_connect"
                 else:
                     # Check if already configured
                     await self.async_set_unique_id(ip_address)
                     self._abort_if_unique_id_configured()
-                    
+
                     return self.async_create_entry(
                         title=f"Marstek Venus E ({ip_address})",
                         data={
@@ -156,6 +166,51 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={
                 "device_count": str(len(self.discovered_devices)),
             },
+        )
+
+    async def async_step_manual_ip(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle manual IP entry when user chooses to enter an IP manually."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            ip_address = user_input.get(CONF_IP_ADDRESS)
+            port = user_input.get(CONF_PORT, 30000)
+
+            _LOGGER.debug("Manual IP provided: %s:%s", ip_address, port)
+
+            try:
+                client = MarstekUDPClient(ip_address=ip_address, port=port)
+                await client.get_realtime_data()
+            except Exception:
+                _LOGGER.exception("Failed to connect to manually provided IP %s", ip_address)
+                errors["base"] = "cannot_connect"
+            else:
+                await self.async_set_unique_id(ip_address)
+                self._abort_if_unique_id_configured()
+
+                return self.async_create_entry(
+                    title=f"Marstek Venus E ({ip_address})",
+                    data={
+                        CONF_IP_ADDRESS: ip_address,
+                        CONF_PORT: port,
+                        CONF_BLE_MAC: user_input.get(CONF_BLE_MAC, ""),
+                    },
+                )
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_IP_ADDRESS): str,
+                vol.Optional(CONF_PORT, default=30000): int,
+                vol.Optional(CONF_BLE_MAC, default=""): str,
+            }
+        )
+
+        return self.async_show_form(
+            step_id="manual_ip",
+            data_schema=schema,
+            errors=errors,
         )
 
     async def async_step_import(self, import_data: dict[str, Any]) -> FlowResult:
