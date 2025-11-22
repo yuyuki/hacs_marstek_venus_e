@@ -60,58 +60,56 @@ class MarstekUDPClient:
         while True:
             attempt += 1
             try:
-            # Create UDP socket
-            loop = asyncio.get_event_loop()
-            transport, protocol = await asyncio.wait_for(
-                loop.create_datagram_endpoint(
-                    lambda: _UDPClientProtocol(request_id),
-                    remote_addr=(self.ip_address, self.port),
-                ),
-                timeout=self.timeout,
-            )
-            
-            # Send request
-            transport.sendto(json.dumps(payload).encode("utf-8"))
-            
-            # Wait for response
-            response = await asyncio.wait_for(
-                protocol.get_response(), timeout=self.timeout
-            )
-            
-            # Clean up
-            transport.close()
-            
-            # Parse and return response
-            if "error" in response:
-                raise Exception(f"RPC Error: {response['error']}")
+                # Create UDP socket
+                loop = asyncio.get_event_loop()
+                transport, protocol = await asyncio.wait_for(
+                    loop.create_datagram_endpoint(
+                        lambda: _UDPClientProtocol(request_id),
+                        remote_addr=(self.ip_address, self.port),
+                    ),
+                    timeout=self.timeout,
+                )
+                
+                # Send request
+                transport.sendto(json.dumps(payload).encode("utf-8"))
+                
+                # Wait for response
+                response = await asyncio.wait_for(
+                    protocol.get_response(), timeout=self.timeout
+                )
+                
+                # Clean up
+                transport.close()
+                
+                # Parse and return response
+                if "error" in response:
+                    raise Exception(f"RPC Error: {response['error']}")
 
-            return response.get("result", {})
+                return response.get("result", {})
 
-            
-            
-        except asyncio.TimeoutError as te:
-            _LOGGER.warning(
-                "Timeout while waiting for response (attempt %s/%s) for method '%s' to %s:%s",
-                attempt,
-                max_attempts,
-                method,
-                self.ip_address,
-                self.port,
-            )
-            # If we haven't exhausted attempts, retry once
-            if attempt < max_attempts:
-                _LOGGER.debug("Retrying %s (attempt %s)", method, attempt + 1)
-                # ensure transport is closed before retry
-                try:
-                    transport.close()
-                except Exception:
-                    pass
-                continue
-            _LOGGER.error("Request timeout to %s:%s for method %s", self.ip_address, self.port, method)
-            raise
-        except Exception as err:
-            _LOGGER.error("Error communicating with device: %s", err)
-            raise
+            except asyncio.TimeoutError as te:
+                _LOGGER.warning(
+                    "Timeout while waiting for response (attempt %s/%s) for method '%s' to %s:%s",
+                    attempt,
+                    max_attempts,
+                    method,
+                    self.ip_address,
+                    self.port,
+                )
+                # If we haven't exhausted attempts, retry once
+                if attempt < max_attempts:
+                    _LOGGER.debug("Retrying %s (attempt %s)", method, attempt + 1)
+                    # ensure transport is closed before retry
+                    try:
+                        transport.close()
+                    except Exception:
+                        pass
+                    continue
+                _LOGGER.error("Request timeout to %s:%s for method %s", self.ip_address, self.port, method)
+                raise
+            except Exception as err:
+                _LOGGER.error("Error communicating with device: %s", err)
+                raise
 
     async def get_realtime_data(self) -> dict[str, Any]:
         """Get real-time data from device.
