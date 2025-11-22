@@ -22,11 +22,40 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Marstek Venus E."""
 
     VERSION = 1
+    
+    def __init__(self):
+        """Initialize config flow."""
+        super().__init__()
+        self.discovered_devices: list[tuple[str, int, dict[str, Any]]] = []
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle a flow initiated by the user.
+        
+        Starts the discovery process.
+        
+        Args:
+            user_input: Input from the user
+            
+        Returns:
+            Config flow result
+        """
+        if user_input is not None:
+            # User clicked continue, move to discovery
+            return await self.async_step_discovery()
+        
+        return self.async_show_form(
+            step_id="user",
+            description_placeholders={},
+        )
+
+    async def async_step_discovery(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle discovery step.
+        
+        Attempts to discover Marstek devices on the local network.
         
         Args:
             user_input: Input from the user
@@ -35,54 +64,97 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             Config flow result
         """
         errors: dict[str, str] = {}
-
-        # Attempt automatic discovery to pre-fill IP address
-        default_ip: str | None = None
+        
+        # Attempt automatic discovery
         try:
-            discovered = await MarstekUDPClient.discover(timeout=2.0, port=30000)
-            if discovered:
-                # discovered is list of tuples (ip, port, payload)
-                default_ip = discovered[0][0]
-                _LOGGER.debug("Discovered Marstek device at %s", default_ip)
-        except Exception:
-            _LOGGER.debug("Device discovery failed or returned no devices")
+            _LOGGER.debug("Starting Marstek device discovery...")
+            self.discovered_devices = await MarstekUDPClient.discover(timeout=3.0, port=30000)
+            _LOGGER.debug("Found %d device(s)", len(self.discovered_devices))
+        except Exception as err:
+            _LOGGER.error("Device discovery failed: %s", err)
+            self.discovered_devices = []
 
+        # Move to selection step
+        return await self.async_step_select_device()
+
+    async def async_step_select_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle device selection step.
+        
+        Allows user to select from discovered devices or enter IP manually.
+        
+        Args:
+            user_input: Input from the user
+            
+        Returns:
+            Config flow result
+        """
+        errors: dict[str, str] = {}
+        
         if user_input is not None:
-            # Validate connection
-            try:
-                client = MarstekUDPClient(
-                    ip_address=user_input[CONF_IP_ADDRESS],
-                    port=user_input.get(CONF_PORT, 30000),
-                )
-                await client.get_realtime_data()
-                
-            except Exception as err:
-                _LOGGER.error("Failed to connect to device: %s", err)
-                errors["base"] = "cannot_connect"
+            ip_address = user_input.get(CONF_IP_ADDRESS)
+            port = user_input.get(CONF_PORT, 30000)
+            
+            if not ip_address:
+                errors["base"] = "no_device_selected"
             else:
-                # Check if already configured
-                await self.async_set_unique_id(user_input[CONF_IP_ADDRESS])
-                self._abort_if_unique_id_configured()
-                
-                return self.async_create_entry(
-                    title=f"Marstek Venus E ({user_input[CONF_IP_ADDRESS]})",
-                    data=user_input,
-                )
-
-        data_schema = vol.Schema(
-            {
-                vol.Required(CONF_IP_ADDRESS, default=default_ip or ""): str,
-                vol.Optional(CONF_PORT, default=30000): int,
-                vol.Optional(CONF_BLE_MAC, default=""): str,
-            }
-        )
-
+                # Validate connection
+                try:
+                    client = MarstekUDPClient(
+                        ip_address=ip_address,
+                        port=port,
+                    )
+                    await client.get_realtime_data()
+                    _LOGGER.debug("Successfully connected to device at %s", ip_address)
+                    
+                except Exception as err:
+                    _LOGGER.error("Failed to connect to device at %s: %s", ip_address, err)
+                    errors["base"] = "cannot_connect"
+                else:
+                    # Check if already configured
+                    await self.async_set_unique_id(ip_address)
+                    self._abort_if_unique_id_configured()
+                    
+                    return self.async_create_entry(
+                        title=f"Marstek Venus E ({ip_address})",
+                        data={
+                            CONF_IP_ADDRESS: ip_address,
+                            CONF_PORT: port,
+                            CONF_BLE_MAC: user_input.get(CONF_BLE_MAC, ""),
+                        },
+                    )
+        
+        # Build device list for selection
+        device_options: dict[str, str] = {}
+        if self.discovered_devices:
+            for ip, port, payload in self.discovered_devices:
+                device_info = payload.get("result", {})
+                device_name = device_info.get("device", "Unknown")
+                ble_mac = device_info.get("ble_mac", "")
+                label = f"{device_name} ({ip}) - MAC: {ble_mac}"
+                device_options[ip] = label
+        
+        # Add manual entry option
+        device_options["manual"] = "Enter IP manually"
+        
+        # Build schema
+        schema = {}
+        
+        if device_options:
+            schema[vol.Required(CONF_IP_ADDRESS)] = vol.In(device_options)
+        else:
+            schema[vol.Required(CONF_IP_ADDRESS)] = str
+        
+        schema[vol.Optional(CONF_PORT, default=30000)] = int
+        schema[vol.Optional(CONF_BLE_MAC, default="")] = str
+        
         return self.async_show_form(
-            step_id="user",
-            data_schema=data_schema,
+            step_id="select_device",
+            data_schema=vol.Schema(schema),
             errors=errors,
             description_placeholders={
-                "docs_url": "https://github.com/YOUR-USERNAME/marstek-venus-e"
+                "device_count": str(len(self.discovered_devices)),
             },
         )
 
@@ -95,4 +167,5 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         Returns:
             Config flow result
         """
-        return await self.async_step_user(import_data)
+
+        return await self.async_step_select_device(import_data)

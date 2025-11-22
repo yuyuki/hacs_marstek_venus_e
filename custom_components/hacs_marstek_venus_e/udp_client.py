@@ -206,9 +206,11 @@ class MarstekUDPClient:
                 _LOGGER.debug("Discovery protocol error: %s", exc)
 
         probe = {
-            "jsonrpc": "2.0",
-            "method": "discover",
             "id": 0,
+            "method": "Marstek.GetDevice",
+            "params": {
+                "ble_mac": "0"
+            }
         }
 
         # Create a UDP socket with broadcast enabled and send probe
