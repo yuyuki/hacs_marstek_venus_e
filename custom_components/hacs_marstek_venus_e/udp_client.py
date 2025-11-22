@@ -174,6 +174,86 @@ class MarstekUDPClient:
         """
         return await self._send_request("get_schedule")
 
+    @staticmethod
+    async def discover(timeout: float = 3.0, port: int = 30000) -> list[tuple[str, int, dict[str, Any]]]:
+        """Discover Marstek devices on the local network via UDP broadcast.
+
+        Sends a JSON-RPC discovery probe as a UDP broadcast and collects
+        any JSON responses received within `timeout` seconds.
+
+        Returns a list of tuples: (ip, port, parsed_json_response).
+        """
+        loop = asyncio.get_event_loop()
+
+        class _DiscoveryProtocol(asyncio.DatagramProtocol):
+            def __init__(self):
+                self.responses: list[tuple[str, int, dict[str, Any]]] = []
+                self.transport = None
+
+            def connection_made(self, transport):
+                self.transport = transport
+
+            def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
+                try:
+                    payload = json.loads(data.decode("utf-8"))
+                except Exception:
+                    _LOGGER.debug("Non-JSON discovery response from %s", addr)
+                    return
+
+                self.responses.append((addr[0], addr[1], payload))
+
+            def error_received(self, exc: Exception) -> None:
+                _LOGGER.debug("Discovery protocol error: %s", exc)
+
+        probe = {
+            "jsonrpc": "2.0",
+            "method": "discover",
+            "id": 0,
+        }
+
+        # Create a UDP socket with broadcast enabled and send probe
+        import socket
+
+        transport = None
+        protocol = None
+        sock = None
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            sock.setblocking(False)
+            sock.bind(("0.0.0.0", 0))
+
+            transport, protocol = await asyncio.wait_for(
+                loop.create_datagram_endpoint(
+                    lambda: _DiscoveryProtocol(),
+                    sock=sock,
+                ),
+                timeout=1.0,
+            )
+
+            # Send broadcast probe
+            transport.sendto(json.dumps(probe).encode("utf-8"), ("255.255.255.255", port))
+
+            # Wait for responses for the specified timeout
+            await asyncio.sleep(timeout)
+
+            results = list(protocol.responses)
+
+            return results
+
+        except Exception as err:
+            _LOGGER.debug("Discovery failed: %s", err)
+            return []
+        finally:
+            if transport:
+                transport.close()
+            # If socket wasn't passed into transport (transport closed), ensure it's closed
+            try:
+                if sock:
+                    sock.close()
+            except Exception:
+                pass
+
 
 class _UDPClientProtocol(asyncio.DatagramProtocol):
     """UDP protocol handler for JSON-RPC responses."""

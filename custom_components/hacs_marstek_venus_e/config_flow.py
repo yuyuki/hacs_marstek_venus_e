@@ -36,6 +36,17 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """
         errors: dict[str, str] = {}
 
+        # Attempt automatic discovery to pre-fill IP address
+        default_ip: str | None = None
+        try:
+            discovered = await MarstekUDPClient.discover(timeout=2.0, port=30000)
+            if discovered:
+                # discovered is list of tuples (ip, port, payload)
+                default_ip = discovered[0][0]
+                _LOGGER.debug("Discovered Marstek device at %s", default_ip)
+        except Exception:
+            _LOGGER.debug("Device discovery failed or returned no devices")
+
         if user_input is not None:
             # Validate connection
             try:
@@ -60,7 +71,7 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         data_schema = vol.Schema(
             {
-                vol.Required(CONF_IP_ADDRESS): str,
+                vol.Required(CONF_IP_ADDRESS, default=default_ip or ""): str,
                 vol.Optional(CONF_PORT, default=30000): int,
                 vol.Optional(CONF_BLE_MAC, default=""): str,
             }
