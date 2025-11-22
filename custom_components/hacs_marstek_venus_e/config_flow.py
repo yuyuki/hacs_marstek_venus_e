@@ -114,6 +114,7 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     client = MarstekUDPClient(
                         ip_address=ip_address,
                         port=port,
+                        timeout=15.0,
                     )
                     await client.get_realtime_data()
                     _LOGGER.debug("Successfully connected to device at %s", ip_address)
@@ -181,7 +182,7 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.debug("Manual IP provided: %s:%s", ip_address, port)
 
             try:
-                client = MarstekUDPClient(ip_address=ip_address, port=port)
+                client = MarstekUDPClient(ip_address=ip_address, port=port, timeout=15.0)
                 await client.get_realtime_data()
             except Exception:
                 _LOGGER.exception("Failed to connect to manually provided IP %s", ip_address)
