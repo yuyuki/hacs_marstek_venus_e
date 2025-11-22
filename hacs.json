@@ -1,0 +1,10 @@
+{
+  "name": "Marstek Venus E",
+  "render_readme": true,
+  "domains": ["sensor", "binary_sensor"],
+  "iot_class": "Local Polling",
+  "homeassistant": "2025.11.0",
+  "version": "1.0.0",
+  "authors": ["@YOUR-USERNAME"],
+  "requirements": []
+}

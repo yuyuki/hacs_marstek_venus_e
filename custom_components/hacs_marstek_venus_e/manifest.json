@@ -1,0 +1,27 @@
+{
+  "domain": "marstek_venus_e",
+  "name": "Marstek Venus E",
+  "codeowners": ["@YOUR-USERNAME"],
+  "config_flow": true,
+  "documentation": "https://github.com/YOUR-USERNAME/marstek-venus-e",
+  "requirements": [],
+  "version": "1.0.0",
+  "homeassistant": "2025.11.0",
+  "iot_class": "Local Polling",
+  "issue_tracker": "https://github.com/YOUR-USERNAME/marstek-venus-e/issues",
+  "platforms": ["sensor", "binary_sensor"],
+  "services": {
+    "set_mode": {
+      "name": "Set Operating Mode",
+      "description": "Change the operating mode of the Marstek Venus E system"
+    },
+    "set_manual_schedule": {
+      "name": "Set Manual Schedule",
+      "description": "Configure a manual charging/discharging schedule"
+    },
+    "set_passive_mode": {
+      "name": "Set Passive Mode",
+      "description": "Set passive mode with a power target"
+    }
+  }
+}

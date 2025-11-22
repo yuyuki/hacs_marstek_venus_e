@@ -1,0 +1,101 @@
+set_mode:
+  name: Set Operating Mode
+  description: Change the operating mode of the Marstek Venus E system
+  fields:
+    mode:
+      name: Mode
+      description: Operating mode (Auto, AI, Manual, or Passive)
+      required: true
+      selector:
+        select:
+          options:
+            - Auto
+            - AI
+            - Manual
+            - Passive
+
+set_manual_schedule:
+  name: Set Manual Schedule
+  description: Configure a manual charging/discharging schedule
+  fields:
+    time_num:
+      name: Time Slot Number
+      description: Time slot number (1-4)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+          mode: slider
+    start_time:
+      name: Start Time
+      description: When the schedule starts (HH:MM format)
+      required: true
+      selector:
+        time:
+    end_time:
+      name: End Time
+      description: When the schedule ends (HH:MM format)
+      required: true
+      selector:
+        time:
+    week_set:
+      name: Days of Week
+      description: |
+        Bitmask for days to apply schedule:
+        1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun
+        127=All days, 31=Weekdays only, 96=Weekends only
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box
+    power:
+      name: Power
+      description: Power in watts (negative=charge, positive=discharge)
+      required: true
+      selector:
+        number:
+          min: -10000
+          max: 10000
+          step: 100
+          unit_of_measurement: "W"
+          mode: box
+    enable:
+      name: Enable Schedule
+      description: Enable or disable the schedule
+      required: false
+      default: true
+      selector:
+        boolean:
+
+set_passive_mode:
+  name: Set Passive Mode
+  description: Set passive mode with a specific power target
+  fields:
+    power:
+      name: Target Power
+      description: Target power in watts
+      required: true
+      selector:
+        number:
+          min: -10000
+          max: 10000
+          step: 100
+          unit_of_measurement: "W"
+          mode: box
+    cd_time:
+      name: Countdown Time
+      description: Countdown time in seconds (0 for indefinite)
+      required: false
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 86400
+          step: 60
+          unit_of_measurement: "s"
+          mode: box

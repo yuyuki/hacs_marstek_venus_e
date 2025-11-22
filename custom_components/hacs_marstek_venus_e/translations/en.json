@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Marstek Venus E Configuration",
+        "description": "Connect to your Marstek Venus E device. Find your device IP address in your router's DHCP client list.",
+        "data": {
+          "ip_address": "Device IP Address",
+          "port": "UDP Port (default: 30000)",
+          "ble_mac": "Bluetooth MAC Address (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to device. Check IP address and port.",
+      "invalid_ip": "Invalid IP address format.",
+      "already_configured": "Device is already configured."
+    },
+    "abort": {
+      "already_configured": "Device is already configured."
+    }
+  },
+  "services": {
+    "set_mode": {
+      "name": "Set Operating Mode",
+      "description": "Change the operating mode of the Marstek Venus E system"
+    },
+    "set_manual_schedule": {
+      "name": "Set Manual Schedule",
+      "description": "Configure a manual charging/discharging schedule"
+    },
+    "set_passive_mode": {
+      "name": "Set Passive Mode",
+      "description": "Set passive mode with a specific power target"
+    }
+  }
+}
