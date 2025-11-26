@@ -1,7 +1,7 @@
 """Constants for the Marstek Venus E integration."""
 from typing import Final
 
-DOMAIN: Final = "marstek_venus_e"
+DOMAIN: Final = "hacs_marstek_venus_e"
 
 # Device Configuration
 DEFAULT_PORT: Final = 30000
