@@ -91,9 +91,23 @@
         "state": {
           "Auto": "Auto (Autoconsommation)",
           "AI": "Mode IA",
-          "Manual": "Horaire manuel",
+          "Manual": "Programmation manuelle",
           "Passive": "Mode passif"
         }
+      }
+    },
+    "button": {
+      "clear_schedules": {
+        "name": "Effacer tous les horaires"
+      },
+      "refresh_battery": {
+        "name": "Actualiser l'état de la batterie"
+      },
+      "refresh_energy_status": {
+        "name": "Actualiser l'état énergétique"
+      },
+      "refresh_mode": {
+        "name": "Actualiser le mode et données CT"
       }
     }
   },

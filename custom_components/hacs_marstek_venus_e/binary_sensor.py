@@ -94,23 +94,25 @@ class MarstekBinarySensor(CoordinatorEntity, BinarySensorEntity):
         Returns:
             True if sensor is on, False if off, None if unavailable
         """
-        if not self.coordinator.data:
-            return None
-        
         attr_path = self.sensor_config.get("attr")
+        source = self.sensor_config.get("source", "auto")
         
-        if attr_path:
-            # Simple path lookup
+        # Check appropriate data source based on sensor configuration
+        if source == "battery" and self.coordinator.battery_data:
+            # From Bat.GetStatus (manual refresh)
+            if attr_path in self.coordinator.battery_data:
+                value = self.coordinator.battery_data[attr_path]
+                return bool(value)
+        elif source == "mode" and self.coordinator.mode_data:
+            # From ES.GetMode (manual refresh)
+            if attr_path in self.coordinator.mode_data:
+                value = self.coordinator.mode_data[attr_path]
+                return bool(value)
+        elif source == "auto" and self.coordinator.data:
+            # From ES.GetStatus (automatic updates)
             if attr_path in self.coordinator.data:
                 value = self.coordinator.data[attr_path]
                 return bool(value)
-            
-            # Check in battery_info
-            if "battery_info" in self.coordinator.data:
-                battery_info = self.coordinator.data["battery_info"]
-                if isinstance(battery_info, dict) and attr_path in battery_info:
-                    value = battery_info[attr_path]
-                    return bool(value)
         
         return None
 

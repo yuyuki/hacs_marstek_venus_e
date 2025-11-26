@@ -103,6 +103,20 @@
           "Passive": "Passive Mode"
         }
       }
+    },
+    "button": {
+      "clear_schedules": {
+        "name": "Clear all schedules"
+      },
+      "refresh_battery": {
+        "name": "Refresh Battery Status"
+      },
+      "refresh_energy_status": {
+        "name": "Refresh Energy Status"
+      },
+      "refresh_mode": {
+        "name": "Refresh Mode & CT Data"
+      }
     }
   },
   "services": {

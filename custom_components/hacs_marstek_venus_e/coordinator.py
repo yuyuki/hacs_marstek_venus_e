@@ -47,6 +47,9 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
             port=entry.data.get(CONF_PORT, 30000),
         )
         self.data: dict[str, Any] = {}
+        # Storage for manual API call results
+        self.battery_data: dict[str, Any] = {}
+        self.mode_data: dict[str, Any] = {}
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from device.
@@ -55,48 +58,15 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
             Dictionary containing device data
             
         Raises:
-            UpdateFailed: If all data fetches fail
+            UpdateFailed: If data fetch fails
         """
-        import asyncio
-        
-        errors = []
-        realtime_data = None
-        battery_info = None
-        
-        # Try to get real-time data (ES.GetStatus)
         try:
-            realtime_data = await self.client.get_realtime_data()
+            # Get energy system status - this includes all key metrics
+            data = await self.client.get_energy_system_status()
+            return data
         except Exception as err:
-            _LOGGER.warning("Failed to get realtime data: %s", err)
-            errors.append(f"ES.GetStatus: {err}")
-        
-        # Add delay between sequential calls to avoid device processing issues
-        # Testing shows device needs time between consecutive API calls
-        await asyncio.sleep(60)
-        
-        # Try to get battery info (Bat.GetStatus)
-        try:
-            battery_info = await self.client.get_battery_info()
-        except Exception as err:
-            _LOGGER.warning("Failed to get battery info: %s", err)
-            errors.append(f"Bat.GetStatus: {err}")
-        
-        # If both failed, raise an error
-        if realtime_data is None and battery_info is None:
-            raise UpdateFailed(f"All API calls failed: {'; '.join(errors)}")
-        
-        # Merge available data
-        data = {}
-        if realtime_data:
-            data.update(realtime_data)
-        if battery_info:
-            data["battery_info"] = battery_info
-        
-        # Log if partial data available
-        if errors:
-            _LOGGER.info("Partial data update successful despite errors: %s", "; ".join(errors))
-        
-        return data
+            _LOGGER.error("Failed to get device data: %s", err)
+            raise UpdateFailed(f"Failed to update data: {err}")
 
     async def async_shutdown(self) -> None:
         """Shutdown the coordinator."""
@@ -159,3 +129,23 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
         results = await self.client.clear_all_manual_schedules()
         await self.async_request_refresh()
         return results
+
+    async def refresh_battery_data(self) -> dict[str, Any]:
+        """Manually refresh battery data.
+        
+        Returns:
+            Battery data dictionary
+        """
+        self.battery_data = await self.client.get_battery_status()
+        self.async_update_listeners()
+        return self.battery_data
+
+    async def refresh_mode_data(self) -> dict[str, Any]:
+        """Manually refresh mode and CT data.
+        
+        Returns:
+            Mode data dictionary
+        """
+        self.mode_data = await self.client.get_energy_system_mode()
+        self.async_update_listeners()
+        return self.mode_data
