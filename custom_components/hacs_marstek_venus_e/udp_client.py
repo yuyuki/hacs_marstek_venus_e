@@ -228,14 +228,6 @@ class MarstekUDPClient:
             {"id": 0, "power": power, "cd_time": cd_time},
         )
 
-    async def get_schedule(self) -> dict[str, Any]:
-        """Get current schedule configuration.
-        
-        Returns:
-            Current schedule data
-        """
-        return await self._send_request("ES.GetSchedule", {"id": 0})
-
     @staticmethod
     async def discover(timeout: float = 15.0, port: int = 30000) -> list[tuple[str, int, dict[str, Any]]]:
         """Discover Marstek devices on the local network via UDP broadcast.

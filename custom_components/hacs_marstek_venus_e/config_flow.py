@@ -253,13 +253,8 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
-        return self.async_show_menu(
-            step_id="init",
-            menu_options=[
-                "configure_manual_mode",
-                "view_schedules",
-            ],
-        )
+        # Go directly to configure manual mode (API doesn't support reading schedules)
+        return await self.async_step_configure_manual_mode()
     
     async def async_step_configure_manual_mode(
         self, user_input: dict[str, Any] | None = None
@@ -331,29 +326,9 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
             step_id="configure_manual_mode",
             data_schema=schema,
             description_placeholders={
-                "power_info": "Use negative values to charge (e.g., -1000W), positive to discharge (e.g., 1000W)"
+                "power_info": "Use negative values to charge (e.g., -1000W), positive to discharge (e.g., 1000W). Note: The API does not support reading back schedules, so configure carefully."
             },
         )
-    
-    async def async_step_view_schedules(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """View current schedules."""
-        coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id)
-        if coordinator:
-            try:
-                schedules = await coordinator.get_schedule()
-                schedule_info = self._format_schedules(schedules)
-                
-                return self.async_show_form(
-                    step_id="view_schedules",
-                    data_schema=vol.Schema({}),
-                    description_placeholders={"schedules": schedule_info},
-                )
-            except Exception as err:
-                _LOGGER.error("Error retrieving schedules: %s", err)
-        
-        return self.async_abort(reason="cannot_retrieve_schedules")
     
     def _calculate_week_set(self, days: list[str]) -> int:
         """Calculate week_set bitmask from day names."""
@@ -372,38 +347,3 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
             week_set |= day_map.get(day, 0)
         
         return week_set if week_set > 0 else 127  # Default to all days if none selected
-    
-    def _format_schedules(self, schedules: dict[str, Any]) -> str:
-        """Format schedules for display."""
-        if not schedules or "manual_cfg" not in schedules:
-            return "No schedules configured"
-        
-        manual_cfg = schedules.get("manual_cfg", [])
-        if not manual_cfg:
-            return "No manual schedules configured"
-        
-        lines = []
-        for idx, schedule in enumerate(manual_cfg, 1):
-            enabled = "✓" if schedule.get("enable") else "✗"
-            start = schedule.get("start_time", "??:??")
-            end = schedule.get("end_time", "??:??")
-            power = schedule.get("power", 0)
-            week_set = schedule.get("week_set", 0)
-            days = self._decode_week_set(week_set)
-            
-            lines.append(f"Slot {idx} [{enabled}]: {start}-{end}, {power}W, {days}")
-        
-        return "\n".join(lines)
-    
-    def _decode_week_set(self, week_set: int) -> str:
-        """Decode week_set bitmask to day names."""
-        if week_set == 127:
-            return "All days"
-        
-        days = []
-        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        for i, name in enumerate(day_names):
-            if week_set & (1 << i):
-                days.append(name)
-        
-        return ", ".join(days) if days else "No days"

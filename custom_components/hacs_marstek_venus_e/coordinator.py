@@ -117,11 +117,3 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
         """
         await self.client.set_passive_mode(power=power, cd_time=cd_time)
         await self.async_request_refresh()
-
-    async def get_schedule(self) -> dict[str, Any]:
-        """Get current schedule configuration.
-        
-        Returns:
-            Dictionary containing schedule data
-        """
-        return await self.client.get_schedule()
