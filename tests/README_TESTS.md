@@ -1,5 +1,182 @@
 # Marstek Venus E - Test Suite
 
+This directory contains test scripts for verifying the Marstek Venus E API functions and integration functionality.
+
+## Test Files Overview
+
+### Individual API Function Tests (Recommended)
+
+Each test file focuses on a specific API function for easier debugging and validation:
+
+- **`test_marstek_get_device.py`** - Device discovery via UDP broadcast
+- **`test_es_get_status.py`** - Energy system status retrieval
+- **`test_es_get_mode.py`** - Operating mode retrieval
+
+### Comprehensive Tests
+
+- **`test_api_functions.py`** - Runs all API tests in sequence
+- **`test_discovery.py`** - Legacy discovery test with network diagnostics
+- **`test_discovery_simple.py`** - Simple discovery test
+- **`test_direct_udp.py`** - Low-level UDP communication test
+
+## Quick Start
+
+### 1. Test Device Discovery
+
+First, verify your device can be discovered on the network:
+
+```bash
+python tests/test_marstek_get_device.py
+```
+
+This will find all Marstek Venus E devices on your local network and display their details.
+
+### 2. Test Energy Status (ES.GetStatus)
+
+Once you have the device IP, test energy system status retrieval:
+
+```bash
+python tests/test_es_get_status.py --ip 192.168.0.225
+```
+
+Or let it discover automatically:
+
+```bash
+python tests/test_es_get_status.py
+```
+
+### 3. Test Operating Mode (ES.GetMode)
+
+Test retrieving the current operating mode:
+
+```bash
+python tests/test_es_get_mode.py --ip 192.168.0.225
+```
+
+### 4. Run All Tests
+
+To run all API tests in sequence:
+
+```bash
+python tests/test_api_functions.py --ip 192.168.0.225
+```
+
+## Detailed Test Documentation
+
+### test_marstek_get_device.py
+
+Tests the `Marstek.GetDevice` API method for device discovery.
+
+**Usage:**
+```bash
+# Run with default 15-second timeout
+python tests/test_marstek_get_device.py
+
+# Run with custom timeout
+python tests/test_marstek_get_device.py --timeout 20
+
+# Show help
+python tests/test_marstek_get_device.py --help
+```
+
+**What it tests:**
+- UDP broadcast discovery on port 30000
+- Device response parsing
+- Device information extraction (IP, BLE MAC, WiFi MAC, SSID, firmware version)
+
+**Expected output:**
+- Device IP address
+- Device type (e.g., "VenusE 3.0")
+- Firmware version (e.g., 143 for API v1.4.3)
+- Network information
+
+---
+
+### test_es_get_status.py
+
+Tests the `ES.GetStatus` API method for retrieving energy system status.
+
+**Usage:**
+```bash
+# Test with specific IP
+python tests/test_es_get_status.py --ip 192.168.0.225
+
+# Auto-discover and test
+python tests/test_es_get_status.py
+
+# Custom timeout
+python tests/test_es_get_status.py --ip 192.168.0.225 --timeout 10
+
+# Show help
+python tests/test_es_get_status.py --help
+```
+
+**What it tests:**
+- Energy system status retrieval via unicast UDP
+- Battery state of charge (SOC)
+- Battery capacity (Wh)
+- Battery power (W)
+- PV power generation (W)
+- Grid power (import/export)
+- Total energy metrics (kWh)
+
+**Expected output:**
+- Battery SOC percentage
+- Current battery capacity
+- PV power generation
+- Grid power flow
+- Total energy counters
+
+---
+
+### test_es_get_mode.py
+
+Tests the `ES.GetMode` API method for retrieving the current operating mode.
+
+**Usage:**
+```bash
+# Test with specific IP
+python tests/test_es_get_mode.py --ip 192.168.0.225
+
+# Auto-discover and test
+python tests/test_es_get_mode.py
+
+# Custom timeout
+python tests/test_es_get_mode.py --ip 192.168.0.225 --timeout 10
+
+# Show help
+python tests/test_es_get_mode.py --help
+```
+
+**What it tests:**
+- Operating mode retrieval (Auto, AI, Manual, Passive)
+- CT meter status and power readings
+- Mode-specific configuration
+- Additional status metrics
+
+**Expected output:**
+- Current operating mode
+- Battery SOC
+- Power metrics
+- CT meter status (if installed)
+- Mode-specific configuration (for Manual/Passive modes)
+
+---
+
+## API Functions Reference
+
+| API Method | Test File | Description | Status |
+|------------|-----------|-------------|--------|
+| `Marstek.GetDevice` | test_marstek_get_device.py | Device discovery via broadcast | ✓ Tested |
+| `ES.GetStatus` | test_es_get_status.py | Energy system status | ✓ Tested |
+| `ES.GetMode` | test_es_get_mode.py | Operating mode | ✓ Tested |
+| `ES.SetMode` | - | Change operating mode | Not tested (write operation) |
+| `Bat.GetStatus` | - | Battery detailed status | Available in client |
+| `Wifi.GetStatus` | - | WiFi connection status | Available in client |
+| `ES.SetSchedule` | - | Configure manual schedule | Available in client |
+| `ES.GetSchedule` | - | Get schedule configuration | Available in client |
+| `ES.SetPassiveMode` | - | Set passive mode | Available in client |
+
 ## Running Discovery & Connection Tests
 
 A standalone test script is available to verify that the discovery and UDP communication works correctly, without requiring a full Home Assistant installation.

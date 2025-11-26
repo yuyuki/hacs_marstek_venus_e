@@ -140,21 +140,7 @@ class MarstekUDPClient:
         Returns:
             Dictionary containing energy system status
         """
-        # Mock implementation - device doesn't respond to unicast ES.GetStatus
-        # Return sample data for now
-        return {
-            "id": 0,
-            "bat_soc": 98,
-            "bat_cap": 2560,
-            "pv_power": 0,
-            "ongrid_power": 100,
-            "offgrid_power": 0,
-            "bat_power": 0,
-            "total_pv_energy": 0,
-            "total_grid_output_energy": 844,
-            "total_grid_input_energy": 1607,
-            "total_load_energy": 0
-        }
+        return await self._send_request("ES.GetStatus", {"id": 0})
 
     async def get_energy_system_mode(self) -> dict[str, Any]:
         """Get operating mode.
