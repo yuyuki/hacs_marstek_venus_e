@@ -1,14 +1,10 @@
 {
   "name": "Marstek Venus E",
   "render_readme": true,
-  "filename": "hacs_marstek_venus_e.zip",
   "domains": ["sensor", "binary_sensor", "select", "button"],
   "iot_class": "Local Polling",
   "homeassistant": "2025.11.0",
-  "version": "1.0.0",
   "authors": ["@yuyuki"],
   "requirements": [],
-  "content_in_root": false,
-  "zip_release": true,
-  "country": ["FR", "DE", "BE", "NL", "AT", "CH"]
+  "content_in_root": false
 }
