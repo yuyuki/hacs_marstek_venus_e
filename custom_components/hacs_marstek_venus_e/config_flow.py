@@ -12,7 +12,6 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import (
-    DOMAIN,
     CONF_BLE_MAC,
     CONF_TIMEOUT,
     MODE_AUTO,
@@ -26,11 +25,10 @@ from .udp_client import MarstekUDPClient
 _LOGGER = logging.getLogger(__name__)
 
 
-class MarstekConfigFlow(config_entries.ConfigFlow):
+class MarstekConfigFlow(config_entries.ConfigFlow, domain="hacs_marstek_venus_e"):
     """Config flow for Marstek Venus E."""
 
     VERSION = 1
-    DOMAIN = DOMAIN
     
     def __init__(self):
         """Initialize config flow."""
