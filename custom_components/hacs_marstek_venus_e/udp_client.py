@@ -176,7 +176,19 @@ class MarstekUDPClient:
         Returns:
             Response from device
         """
-        return await self._send_request("ES.SetMode", {"mode": mode, "id": 0})
+        # Build the config based on mode
+        config = {"mode": mode}
+        
+        if mode == "Auto":
+            config["auto_cfg"] = {"enable": 1}
+        elif mode == "AI":
+            config["ai_cfg"] = {"enable": 1}
+        elif mode == "Manual":
+            config["manual_cfg"] = {"enable": 1}
+        elif mode == "Passive":
+            config["passive_cfg"] = {"enable": 1}
+        
+        return await self._send_request("ES.SetMode", {"id": 0, "config": config})
 
     async def set_manual_schedule(
         self,
