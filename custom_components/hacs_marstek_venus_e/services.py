@@ -29,9 +29,10 @@ SERVICE_SET_MANUAL_SCHEDULE_SCHEMA = vol.Schema(
     {
         vol.Required("time_num"): vol.All(vol.Coerce(int), vol.Range(min=0, max=9)),
         vol.Required("start_time"): cv.time,
-        vol.Required("end_time"): cv.time,
+        vol.Required("end_time"): cv.time,  # Note: end_time must be > start_time (validated by device)
         vol.Required("week_set"): vol.All(vol.Coerce(int), vol.Range(min=1, max=127)),
-        vol.Required("power"): vol.Coerce(int),
+        vol.Required("mode"): vol.In(["Charging", "Discharging"]),  # Charging or Discharging
+        vol.Required("power"): vol.All(vol.Coerce(int), vol.Range(min=100, max=800)),  # Power magnitude (always positive)
         vol.Optional("enable", default=True): cv.boolean,
     }
 )
@@ -76,8 +77,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         start_time = call.data.get("start_time").strftime("%H:%M")
         end_time = call.data.get("end_time").strftime("%H:%M")
         week_set = call.data.get("week_set")
-        power = call.data.get("power")
+        mode = call.data.get("mode")
+        power_magnitude = call.data.get("power")
         enable = call.data.get("enable", True)
+        
+        # Convert power based on mode: Charging = negative, Discharging = positive
+        power = -power_magnitude if mode == "Charging" else power_magnitude
         
         for entry_id, coordinator in hass.data[DOMAIN].items():
             try:
@@ -90,10 +95,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     enable=enable,
                 )
                 _LOGGER.info(
-                    "Set manual schedule: time_num=%s, start=%s, end=%s, power=%s",
+                    "Set manual schedule: time_num=%s, start=%s, end=%s, mode=%s, power=%s",
                     time_num,
                     start_time,
                     end_time,
+                    mode,
                     power,
                 )
             except Exception as err:

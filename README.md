@@ -29,7 +29,8 @@ A comprehensive Home Assistant custom integration for the **Marstek Venus E** ba
 - **UI Schedule Configuration**: Set up charging/discharging schedules through UI (no YAML needed)
 - **Operating Modes**: Auto (Self-Consuming), AI, Manual, Passive
 - Real-time mode changes
-- Up to 4 time-based schedules
+- Up to 10 time-based schedules (slots 0-9)
+- **Automation Support**: Configure all 10 schedules via Home Assistant automations
 
 ✅ **Home Assistant Integration**
 - Native Energy Dashboard support
@@ -77,21 +78,39 @@ A comprehensive Home Assistant custom integration for the **Marstek Venus E** ba
 
 ### Configuring Manual Schedules
 
-After adding the integration, you can configure charging/discharging schedules through the UI:
+After adding the integration, you can configure charging/discharging schedules in two ways:
+
+#### Method 1: Through the UI (Recommended for Single Slots)
 
 1. Go to **Settings** → **Devices & Services**
 2. Find **Marstek Venus E** integration
 3. Click **Configure** (gear icon)
 4. Select **"Configure Manual Mode Schedule"**
 5. Set up your schedule:
-   - **Time Slot**: Choose 1-4 (you can create 4 different schedules)
+   - **Time Slot**: Choose 0-9 (you can create 10 different schedules)
    - **Start/End Time**: When the schedule runs
    - **Active Days**: Select days of the week
    - **Power**: Negative to charge (-1000W), positive to discharge (+1000W)
    - **Enable**: Toggle to activate
 6. Click Submit
 
-You can also view current schedules from the configuration menu.
+#### Method 2: Through Automations (Recommended for Multiple Slots)
+
+Configure all 10 schedule slots automatically when you switch to Manual mode using Home Assistant automations. This is the easiest way to set up complex schedules!
+
+**Quick Start:**
+1. Copy the example automation from `example_automation.yaml` in this repository
+2. Paste it into your Home Assistant automations
+3. Adjust times, power levels, and days to match your needs
+4. Save and test by switching to Manual mode!
+
+**Benefits:**
+- Configure all 10 slots in one action
+- Different schedules for weekdays vs weekends
+- Dynamic schedules based on battery level, weather, or electricity prices
+- Seasonal adjustments (winter vs summer patterns)
+
+See the **[Manual Mode Automation Guide](MANUAL_MODE_AUTOMATION_GUIDE.md)** for detailed examples and best practices.
 
 ## Entities
 
@@ -165,13 +184,20 @@ Configure a manual charging/discharging schedule.
 ```yaml
 service: marstek_venus_e.set_manual_schedule
 data:
-  time_num: 1  # Time slot 1-4
+  time_num: 0  # Time slot 0-9 (10 slots available!)
   start_time: "09:00"
-  end_time: "17:00"
-  week_set: 127  # All days (1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun)
-  power: -3000  # Negative = charge, Positive = discharge (W)
+  end_time: "17:00"  # MUST be greater than start_time
+  week_set: 127  # All days (byte-based: 1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun)
+  mode: "Charging"  # "Charging" or "Discharging"
+  power: 500  # 100-800W magnitude (always positive)
   enable: true
 ```
+
+**Important Constraints:**
+- `end_time` must be greater than `start_time`
+- `mode` must be "Charging" (negative power) or "Discharging" (positive power)
+- `power` magnitude must be between 100 and 800 watts (always positive)
+- `week_set` uses byte-based bitmask
 
 **Week Set Bitmask:**
 - Monday: 1
@@ -372,7 +398,62 @@ Add your Marstek Venus E to Home Assistant's Energy Dashboard:
 
 ## Automation Examples
 
-### Charge Battery During Cheap Hours
+### Auto-Configure All 10 Schedules When Switching to Manual Mode
+
+The best way to use Manual mode is to automatically configure all 10 schedule slots when you switch to it:
+
+```yaml
+automation:
+  - alias: "Marstek - Auto-Configure on Manual Mode"
+    trigger:
+      - platform: state
+        entity_id: select.operating_mode
+        to: "Manual"
+    action:
+      # Slot 0: Night charging
+      - service: marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 0
+          start_time: "01:00"
+          end_time: "06:00"
+          week_set: 127  # All days
+          mode: "Charging"
+          power: 800  # Charge at 800W
+          enable: true
+      
+      # Slot 1: Morning peak discharge (weekdays)
+      - service: marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 1
+          start_time: "07:00"
+          end_time: "09:00"
+          week_set: 31  # Weekdays only
+          mode: "Discharging"
+          power: 700  # Discharge at 700W
+          enable: true
+      
+      # Slot 2: Evening peak discharge
+      - service: marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 2
+          start_time: "18:00"
+          end_time: "22:00"
+          week_set: 127  # All days
+          mode: "Discharging"
+          power: 750  # Discharge at 750W
+          enable: true
+      
+      # ... configure remaining slots 3-9 as needed
+```
+
+**📖 See the [Manual Mode Automation Guide](MANUAL_MODE_AUTOMATION_GUIDE.md) for:**
+- Complete 10-slot configuration examples
+- Seasonal schedules (winter vs summer)
+- Dynamic schedules based on battery level
+- Price-based charging strategies
+- Weekend vs weekday patterns
+
+### Charge Battery During Cheap Hours (Single Slot)
 
 ```yaml
 automation:
@@ -383,11 +464,11 @@ automation:
     action:
       - service: marstek_venus_e.set_manual_schedule
         data:
-          time_num: 1
-          start_time: "23:00"
-          end_time: "07:00"
+          time_num: 0
+          start_time: "01:00"
+          end_time: "07:00"  # Must be > start_time
           week_set: 127  # Every day
-          power: -3000  # Charge at 3000W
+          power: 800  # Maximum (800W)
           enable: true
       - service: marstek_venus_e.set_mode
         data:

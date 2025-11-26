@@ -36,14 +36,14 @@ set_manual_schedule:
         time:
     end_time:
       name: End Time
-      description: When the schedule ends (HH:MM format)
+      description: When the schedule ends (HH:MM format, must be greater than start time)
       required: true
       selector:
         time:
     week_set:
       name: Days of Week
       description: |
-        Bitmask for days to apply schedule:
+        Byte-based bitmask for days to apply schedule:
         1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun
         127=All days, 31=Weekdays only, 96=Weekends only
       required: true
@@ -53,15 +53,25 @@ set_manual_schedule:
           max: 127
           step: 1
           mode: box
+    mode:
+      name: Mode
+      description: Operating mode for this schedule
+      required: true
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
     power:
       name: Power
-      description: Power in watts (negative=charge, positive=discharge)
+      description: Power magnitude in watts (100-800W)
       required: true
       selector:
         number:
-          min: -10000
-          max: 10000
-          step: 100
+          min: 100
+          max: 800
+          step: 10
           unit_of_measurement: "W"
           mode: box
     enable:

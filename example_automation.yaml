@@ -1,0 +1,198 @@
+# Example Home Assistant Automation for Marstek Venus E Manual Mode
+# Copy this into your automations.yaml or create via UI
+
+# IMPORTANT: Replace "select.operating_mode" with your actual entity ID
+# It might be something like "select.marstek_venus_e_operating_mode"
+
+automation:
+  - alias: "Marstek - Auto-Configure 10 Schedules on Manual Mode"
+    description: "Automatically configure all 10 battery schedule slots when switching to Manual mode"
+    
+    # TRIGGER: When operating mode changes to Manual
+    trigger:
+      - platform: state
+        entity_id: select.operating_mode  # CHANGE THIS to your actual entity ID!
+        to: "Manual"
+    
+    # ACTIONS: Configure all 10 schedule slots
+    action:
+      # ========================================
+      # SLOT 0: Midnight Charging (Off-Peak)
+      # ========================================
+      - service: hacs_marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 0
+          start_time: "00:00"
+          end_time: "04:00"
+          week_set: 127  # All days (Mon-Sun)
+          mode: "Charging"
+          power: 800     # Charge at 800W
+          enable: true
+      
+      # ========================================
+      # SLOT 1: Early Morning Charging
+      # ========================================
+      - service: hacs_marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 1
+          start_time: "04:00"
+          end_time: "06:00"
+          week_set: 127  # All days
+          mode: "Charging"
+          power: 600     # Charge at 600W
+          enable: true
+      
+      # ========================================
+      # SLOT 2: Morning Peak Discharge (Weekdays)
+      # ========================================
+      - service: hacs_marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 2
+          start_time: "07:00"
+          end_time: "09:00"
+          week_set: 31   # Weekdays only (Mon-Fri)
+          mode: "Discharging"
+          power: 700     # Discharge at 700W
+          enable: true
+      
+      # ========================================
+      # SLOT 3: Mid-Morning (Disabled - Let Solar Handle)
+      # ========================================
+      - service: hacs_marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 3
+          start_time: "09:00"
+          end_time: "12:00"
+          week_set: 127  # All days
+          mode: "Charging"
+          power: 100     # Minimum power
+          enable: false  # DISABLED
+      
+      # ========================================
+      # SLOT 4: Midday Solar Charging
+      # ========================================
+      - service: hacs_marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 4
+          start_time: "12:00"
+          end_time: "15:00"
+          week_set: 127  # All days
+          mode: "Charging"
+          power: 400     # Charge at 400W from solar
+          enable: true
+      
+      # ========================================
+      # SLOT 5: Afternoon (Disabled - Let Solar Handle)
+      # ========================================
+      - service: hacs_marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 5
+          start_time: "15:00"
+          end_time: "17:00"
+          week_set: 127  # All days
+          mode: "Charging"
+          power: 100     # Minimum power
+          enable: false  # DISABLED
+      
+      # ========================================
+      # SLOT 6: Early Evening Shoulder Peak
+      # ========================================
+      - service: hacs_marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 6
+          start_time: "17:00"
+          end_time: "19:00"
+          week_set: 127  # All days
+          mode: "Discharging"
+          power: 500     # Discharge at 500W
+          enable: true
+      
+      # ========================================
+      # SLOT 7: Evening Peak Discharge
+      # ========================================
+      - service: hacs_marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 7
+          start_time: "19:00"
+          end_time: "22:00"
+          week_set: 127  # All days
+          mode: "Discharging"
+          power: 750     # Discharge at 750W
+          enable: true
+      
+      # ========================================
+      # SLOT 8: Late Evening Discharge (Weekends)
+      # ========================================
+      - service: hacs_marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 8
+          start_time: "22:00"
+          end_time: "23:30"
+          week_set: 96   # Weekends only (Sat-Sun)
+          mode: "Discharging"
+          power: 300     # Discharge at 300W
+          enable: true
+      
+      # ========================================
+      # SLOT 9: Pre-Midnight Charging
+      # ========================================
+      - service: hacs_marstek_venus_e.set_manual_schedule
+        data:
+          time_num: 9
+          start_time: "23:00"
+          end_time: "23:59"
+          week_set: 31   # Weekdays only (Mon-Fri)
+          mode: "Charging"
+          power: 600     # Charge at 600W
+          enable: true
+      
+      # Optional: Send a notification when complete
+      - service: notify.notify
+        data:
+          title: "Marstek Venus E"
+          message: "All 10 manual schedule slots configured successfully!"
+
+# ========================================
+# DAY BITMASK REFERENCE
+# ========================================
+# 1   = Monday
+# 2   = Tuesday
+# 4   = Wednesday
+# 8   = Thursday
+# 16  = Friday
+# 32  = Saturday
+# 64  = Sunday
+# 127 = All days (1+2+4+8+16+32+64)
+# 31  = Weekdays (1+2+4+8+16)
+# 96  = Weekends (32+64)
+# 62  = Tue-Sat (2+4+8+16+32)
+
+# ========================================
+# MODE & POWER REFERENCE
+# ========================================
+# Mode: "Charging" or "Discharging"
+#   - Charging: Battery charges from grid/solar (negative power)
+#   - Discharging: Battery discharges to home (positive power)
+#
+# Power magnitude: 100 to 800 watts (always positive)
+#   100W = Minimum power setting
+#   400W = Medium power setting
+#   600W = High power setting
+#   800W = Maximum power setting
+#
+# Note: Power is ALWAYS positive 100-800W
+#       Mode determines if it becomes negative (charging) or stays positive (discharging)
+
+# ========================================
+# HOW TO USE THIS FILE
+# ========================================
+# 1. Copy this file content
+# 2. In Home Assistant, go to Settings > Automations & Scenes
+# 3. Click "Create Automation" > "Create new automation"
+# 4. Click the three dots (⋮) > "Edit in YAML"
+# 5. Paste this content
+# 6. IMPORTANT: Update the entity_id in the trigger section!
+#    - Find your actual entity name (likely "select.marstek_venus_e_operating_mode")
+# 7. Adjust times, power levels, and days to match your needs
+# 8. Save and enable the automation
+# 9. Test by switching to Manual mode!
