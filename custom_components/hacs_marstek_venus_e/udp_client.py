@@ -6,29 +6,33 @@ import json
 import logging
 from typing import Any
 
+from .const import DEFAULT_TIMEOUT
+
 _LOGGER = logging.getLogger(__name__)
 
 
 class MarstekUDPClient:
     """UDP JSON-RPC client for communicating with Marstek Venus E device."""
 
-    def __init__(self, ip_address: str, port: int = 30000, timeout: float = 5.0):
+    def __init__(self, ip_address: str, port: int = 30000, timeout: float = DEFAULT_TIMEOUT):
         """Initialize the UDP client.
         
         Args:
             ip_address: IP address of the device
             port: UDP port (default 30000)
-            timeout: Request timeout in seconds
+            timeout: Request timeout in seconds (default from DEFAULT_TIMEOUT constant)
         """
         self.ip_address = ip_address
         self.port = port
         self.timeout = timeout
-        self._request_id = 0
 
     def _get_next_id(self) -> int:
-        """Get next request ID."""
-        self._request_id += 1
-        return self._request_id
+        """Get next request ID.
+        
+        Note: Marstek device always responds with id: 0 regardless of request ID,
+        so we always use 0 to avoid ID mismatch issues.
+        """
+        return 0
 
     async def _send_request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Send a JSON-RPC request and get response.
@@ -419,11 +423,13 @@ class _UDPClientProtocol(asyncio.DatagramProtocol):
         try:
             response = json.loads(data.decode("utf-8"))
             
-            # Verify response ID matches request
-            if response.get("id") == self.expected_id:
+            # Marstek device always responds with id: 0, so accept it regardless of request ID
+            # We still check for the expected ID first for compatibility, but fall back to id: 0
+            if response.get("id") == self.expected_id or response.get("id") == 0:
                 self._response_future.set_result(response)
             else:
-                _LOGGER.warning("Received response with mismatched ID")
+                _LOGGER.warning("Received response with unexpected ID: %s (expected: %s)", 
+                               response.get("id"), self.expected_id)
                 
         except json.JSONDecodeError as err:
             self._response_future.set_exception(err)

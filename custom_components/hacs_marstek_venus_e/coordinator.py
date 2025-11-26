@@ -55,25 +55,48 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
             Dictionary containing device data
             
         Raises:
-            UpdateFailed: If data fetch fails
+            UpdateFailed: If all data fetches fail
         """
+        import asyncio
+        
+        errors = []
+        realtime_data = None
+        battery_info = None
+        
+        # Try to get real-time data (ES.GetStatus)
         try:
-            # Get real-time data
             realtime_data = await self.client.get_realtime_data()
-            
-            # Get battery info
-            battery_info = await self.client.get_battery_info()
-            
-            # Merge data
-            data = {
-                **realtime_data,
-                "battery_info": battery_info,
-            }
-            
-            return data
-            
         except Exception as err:
-            raise UpdateFailed(f"Error communicating with device: {err}") from err
+            _LOGGER.warning("Failed to get realtime data: %s", err)
+            errors.append(f"ES.GetStatus: {err}")
+        
+        # Add delay between sequential calls to avoid device processing issues
+        # Testing shows device needs time between consecutive API calls
+        await asyncio.sleep(60)
+        
+        # Try to get battery info (Bat.GetStatus)
+        try:
+            battery_info = await self.client.get_battery_info()
+        except Exception as err:
+            _LOGGER.warning("Failed to get battery info: %s", err)
+            errors.append(f"Bat.GetStatus: {err}")
+        
+        # If both failed, raise an error
+        if realtime_data is None and battery_info is None:
+            raise UpdateFailed(f"All API calls failed: {'; '.join(errors)}")
+        
+        # Merge available data
+        data = {}
+        if realtime_data:
+            data.update(realtime_data)
+        if battery_info:
+            data["battery_info"] = battery_info
+        
+        # Log if partial data available
+        if errors:
+            _LOGGER.info("Partial data update successful despite errors: %s", "; ".join(errors))
+        
+        return data
 
     async def async_shutdown(self) -> None:
         """Shutdown the coordinator."""
