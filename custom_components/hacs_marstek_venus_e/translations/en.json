@@ -128,6 +128,14 @@
     "set_passive_mode": {
       "name": "Set Passive Mode",
       "description": "Set passive mode with a specific power target"
+    },
+    "clear_all_schedules": {
+      "name": "Clear All Manual Schedules",
+      "description": "Disable all manual charging/discharging schedules (slots 0-9)"
+    },
+    "change_operating_mode": {
+      "name": "Change Operating Mode",
+      "description": "Change the operating mode with optional manual schedule configuration (when Manual mode is selected)"
     }
   }
 }

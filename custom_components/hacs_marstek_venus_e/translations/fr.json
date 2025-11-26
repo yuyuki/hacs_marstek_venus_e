@@ -128,6 +128,14 @@
     "set_passive_mode": {
       "name": "Définir le mode passif",
       "description": "Définir le mode passif avec une cible de puissance spécifique"
+    },
+    "clear_all_schedules": {
+      "name": "Effacer tous les horaires manuels",
+      "description": "Désactiver tous les horaires de charge/décharge manuels (plages 0-9)"
+    },
+    "change_operating_mode": {
+      "name": "Changer le mode de fonctionnement",
+      "description": "Changer le mode de fonctionnement avec configuration optionnelle des horaires manuels (quand le mode Manuel est sélectionné)"
     }
   }
 }

@@ -423,7 +423,7 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
         # Get current interval (in minutes, converting from seconds if stored that way)
         current_interval_options = self.config_entry.options.get(
             CONF_SCAN_INTERVAL,
-            DEFAULT_SCAN_INTERVAL / 60,  # Convert default from seconds to minutes
+            5,  # Default is 5 minutes
         )
         
         # Define the form schema

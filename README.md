@@ -37,7 +37,7 @@ A comprehensive Home Assistant custom integration for the **Marstek Venus E** ba
 - Service calls for automation
 - Select entity for easy mode switching
 - Options flow for schedule configuration
-- 5-second polling interval
+- 5-minute polling interval (configurable via options)
 - Non-blocking async implementation
 - Comprehensive device information
 - Multi-language support (English, French)

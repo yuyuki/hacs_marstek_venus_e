@@ -113,3 +113,539 @@ set_passive_mode:
 clear_all_schedules:
   name: Clear All Manual Schedules
   description: Disable all manual charging/discharging schedules (slots 0-9)
+
+change_operating_mode:
+  name: Change Operating Mode
+  description: Change the operating mode with optional manual schedule configuration (when Manual mode is selected)
+  fields:
+    mode:
+      name: Mode
+      description: Operating mode (Auto, AI, Manual, or Passive)
+      required: true
+      selector:
+        select:
+          options:
+            - Auto
+            - AI
+            - Manual
+            - Passive
+    slot_0_enable:
+      name: Slot 0 - Enable
+      description: Enable time slot 0
+      required: false
+      default: false
+      selector:
+        boolean:
+    slot_0_start_time:
+      name: Slot 0 - Start Time
+      description: Start time for slot 0
+      required: false
+      selector:
+        time:
+    slot_0_end_time:
+      name: Slot 0 - End Time
+      description: End time for slot 0
+      required: false
+      selector:
+        time:
+    slot_0_power:
+      name: Slot 0 - Power (W)
+      description: Power for slot 0 (100-800W)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 100
+          max: 800
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+    slot_0_mode:
+      name: Slot 0 - Mode
+      description: Charging or Discharging for slot 0
+      required: false
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
+    slot_0_days:
+      name: Slot 0 - Days
+      description: Days of week for slot 0 (bitmask 1-127)
+      required: false
+      default: 127
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box
+    slot_1_enable:
+      name: Slot 1 - Enable
+      description: Enable time slot 1
+      required: false
+      default: false
+      selector:
+        boolean:
+    slot_1_start_time:
+      name: Slot 1 - Start Time
+      description: Start time for slot 1
+      required: false
+      selector:
+        time:
+    slot_1_end_time:
+      name: Slot 1 - End Time
+      description: End time for slot 1
+      required: false
+      selector:
+        time:
+    slot_1_power:
+      name: Slot 1 - Power (W)
+      description: Power for slot 1 (100-800W)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 100
+          max: 800
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+    slot_1_mode:
+      name: Slot 1 - Mode
+      description: Charging or Discharging for slot 1
+      required: false
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
+    slot_1_days:
+      name: Slot 1 - Days
+      description: Days of week for slot 1 (bitmask 1-127)
+      required: false
+      default: 127
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box
+    slot_2_enable:
+      name: Slot 2 - Enable
+      description: Enable time slot 2
+      required: false
+      default: false
+      selector:
+        boolean:
+    slot_2_start_time:
+      name: Slot 2 - Start Time
+      description: Start time for slot 2
+      required: false
+      selector:
+        time:
+    slot_2_end_time:
+      name: Slot 2 - End Time
+      description: End time for slot 2
+      required: false
+      selector:
+        time:
+    slot_2_power:
+      name: Slot 2 - Power (W)
+      description: Power for slot 2 (100-800W)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 100
+          max: 800
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+    slot_2_mode:
+      name: Slot 2 - Mode
+      description: Charging or Discharging for slot 2
+      required: false
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
+    slot_2_days:
+      name: Slot 2 - Days
+      description: Days of week for slot 2 (bitmask 1-127)
+      required: false
+      default: 127
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box
+    slot_3_enable:
+      name: Slot 3 - Enable
+      description: Enable time slot 3
+      required: false
+      default: false
+      selector:
+        boolean:
+    slot_3_start_time:
+      name: Slot 3 - Start Time
+      description: Start time for slot 3
+      required: false
+      selector:
+        time:
+    slot_3_end_time:
+      name: Slot 3 - End Time
+      description: End time for slot 3
+      required: false
+      selector:
+        time:
+    slot_3_power:
+      name: Slot 3 - Power (W)
+      description: Power for slot 3 (100-800W)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 100
+          max: 800
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+    slot_3_mode:
+      name: Slot 3 - Mode
+      description: Charging or Discharging for slot 3
+      required: false
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
+    slot_3_days:
+      name: Slot 3 - Days
+      description: Days of week for slot 3 (bitmask 1-127)
+      required: false
+      default: 127
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box
+    slot_4_enable:
+      name: Slot 4 - Enable
+      description: Enable time slot 4
+      required: false
+      default: false
+      selector:
+        boolean:
+    slot_4_start_time:
+      name: Slot 4 - Start Time
+      description: Start time for slot 4
+      required: false
+      selector:
+        time:
+    slot_4_end_time:
+      name: Slot 4 - End Time
+      description: End time for slot 4
+      required: false
+      selector:
+        time:
+    slot_4_power:
+      name: Slot 4 - Power (W)
+      description: Power for slot 4 (100-800W)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 100
+          max: 800
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+    slot_4_mode:
+      name: Slot 4 - Mode
+      description: Charging or Discharging for slot 4
+      required: false
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
+    slot_4_days:
+      name: Slot 4 - Days
+      description: Days of week for slot 4 (bitmask 1-127)
+      required: false
+      default: 127
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box
+    slot_5_enable:
+      name: Slot 5 - Enable
+      description: Enable time slot 5
+      required: false
+      default: false
+      selector:
+        boolean:
+    slot_5_start_time:
+      name: Slot 5 - Start Time
+      description: Start time for slot 5
+      required: false
+      selector:
+        time:
+    slot_5_end_time:
+      name: Slot 5 - End Time
+      description: End time for slot 5
+      required: false
+      selector:
+        time:
+    slot_5_power:
+      name: Slot 5 - Power (W)
+      description: Power for slot 5 (100-800W)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 100
+          max: 800
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+    slot_5_mode:
+      name: Slot 5 - Mode
+      description: Charging or Discharging for slot 5
+      required: false
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
+    slot_5_days:
+      name: Slot 5 - Days
+      description: Days of week for slot 5 (bitmask 1-127)
+      required: false
+      default: 127
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box
+    slot_6_enable:
+      name: Slot 6 - Enable
+      description: Enable time slot 6
+      required: false
+      default: false
+      selector:
+        boolean:
+    slot_6_start_time:
+      name: Slot 6 - Start Time
+      description: Start time for slot 6
+      required: false
+      selector:
+        time:
+    slot_6_end_time:
+      name: Slot 6 - End Time
+      description: End time for slot 6
+      required: false
+      selector:
+        time:
+    slot_6_power:
+      name: Slot 6 - Power (W)
+      description: Power for slot 6 (100-800W)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 100
+          max: 800
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+    slot_6_mode:
+      name: Slot 6 - Mode
+      description: Charging or Discharging for slot 6
+      required: false
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
+    slot_6_days:
+      name: Slot 6 - Days
+      description: Days of week for slot 6 (bitmask 1-127)
+      required: false
+      default: 127
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box
+    slot_7_enable:
+      name: Slot 7 - Enable
+      description: Enable time slot 7
+      required: false
+      default: false
+      selector:
+        boolean:
+    slot_7_start_time:
+      name: Slot 7 - Start Time
+      description: Start time for slot 7
+      required: false
+      selector:
+        time:
+    slot_7_end_time:
+      name: Slot 7 - End Time
+      description: End time for slot 7
+      required: false
+      selector:
+        time:
+    slot_7_power:
+      name: Slot 7 - Power (W)
+      description: Power for slot 7 (100-800W)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 100
+          max: 800
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+    slot_7_mode:
+      name: Slot 7 - Mode
+      description: Charging or Discharging for slot 7
+      required: false
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
+    slot_7_days:
+      name: Slot 7 - Days
+      description: Days of week for slot 7 (bitmask 1-127)
+      required: false
+      default: 127
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box
+    slot_8_enable:
+      name: Slot 8 - Enable
+      description: Enable time slot 8
+      required: false
+      default: false
+      selector:
+        boolean:
+    slot_8_start_time:
+      name: Slot 8 - Start Time
+      description: Start time for slot 8
+      required: false
+      selector:
+        time:
+    slot_8_end_time:
+      name: Slot 8 - End Time
+      description: End time for slot 8
+      required: false
+      selector:
+        time:
+    slot_8_power:
+      name: Slot 8 - Power (W)
+      description: Power for slot 8 (100-800W)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 100
+          max: 800
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+    slot_8_mode:
+      name: Slot 8 - Mode
+      description: Charging or Discharging for slot 8
+      required: false
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
+    slot_8_days:
+      name: Slot 8 - Days
+      description: Days of week for slot 8 (bitmask 1-127)
+      required: false
+      default: 127
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box
+    slot_9_enable:
+      name: Slot 9 - Enable
+      description: Enable time slot 9
+      required: false
+      default: false
+      selector:
+        boolean:
+    slot_9_start_time:
+      name: Slot 9 - Start Time
+      description: Start time for slot 9
+      required: false
+      selector:
+        time:
+    slot_9_end_time:
+      name: Slot 9 - End Time
+      description: End time for slot 9
+      required: false
+      selector:
+        time:
+    slot_9_power:
+      name: Slot 9 - Power (W)
+      description: Power for slot 9 (100-800W)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 100
+          max: 800
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+    slot_9_mode:
+      name: Slot 9 - Mode
+      description: Charging or Discharging for slot 9
+      required: false
+      default: Discharging
+      selector:
+        select:
+          options:
+            - Charging
+            - Discharging
+    slot_9_days:
+      name: Slot 9 - Days
+      description: Days of week for slot 9 (bitmask 1-127)
+      required: false
+      default: 127
+      selector:
+        number:
+          min: 1
+          max: 127
+          step: 1
+          mode: box

@@ -5,7 +5,7 @@ DOMAIN: Final = "hacs_marstek_venus_e"
 
 # Device Configuration
 DEFAULT_PORT: Final = 30000
-DEFAULT_SCAN_INTERVAL: Final = 5  # seconds
+DEFAULT_SCAN_INTERVAL: Final = 300  # seconds (5 minutes)
 DEFAULT_TIMEOUT: Final = 20.0  # seconds - UDP request timeout
 
 # Modes
