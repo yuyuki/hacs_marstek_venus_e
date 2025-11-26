@@ -7,5 +7,8 @@
   "homeassistant": "2025.11.0",
   "version": "1.0.0",
   "authors": ["@yuyuki"],
-  "requirements": []
+  "requirements": [],
+  "content_in_root": false,
+  "zip_release": true,
+  "country": ["FR", "DE", "BE", "NL", "AT", "CH"]
 }
