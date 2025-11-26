@@ -57,7 +57,7 @@
         "description": "Configure your Marstek Venus E device settings",
         "menu_options": {
           "configure_manual_mode": "Configure Manual Mode Schedule",
-          "view_schedules": "View Current Schedules"
+          "configure_update_interval": "Configure Update Interval"
         }
       },
       "configure_manual_mode": {
@@ -80,9 +80,15 @@
           "enable": "Check to activate this schedule"
         }
       },
-      "view_schedules": {
-        "title": "Current Schedules",
-        "description": "Active schedules on your device:\n\n{schedules}\n\nReturn to the menu to configure schedules."
+      "configure_update_interval": {
+        "title": "Configure Update Interval",
+        "description": "Set how often the integration polls the device for data. {info}",
+        "data": {
+          "scan_interval": "Update Interval"
+        },
+        "data_description": {
+          "scan_interval": "How often (in minutes) to fetch data from the device. Lower values provide more real-time updates but increase network traffic."
+        }
       }
     }
   },

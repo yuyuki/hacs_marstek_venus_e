@@ -49,7 +49,7 @@
         "description": "Configurez les paramètres de votre appareil Marstek Venus E",
         "menu_options": {
           "configure_manual_mode": "Configurer l'horaire du mode manuel",
-          "view_schedules": "Voir les horaires actuels"
+          "configure_update_interval": "Configurer l'intervalle de mise à jour"
         }
       },
       "configure_manual_mode": {
@@ -72,9 +72,15 @@
           "enable": "Cochez pour activer cet horaire"
         }
       },
-      "view_schedules": {
-        "title": "Horaires actuels",
-        "description": "Horaires actifs sur votre appareil:\n\n{schedules}\n\nRetournez au menu pour configurer les horaires."
+      "configure_update_interval": {
+        "title": "Configurer l'intervalle de mise à jour",
+        "description": "Définissez la fréquence de récupération des données de l'appareil. {info}",
+        "data": {
+          "scan_interval": "Intervalle de mise à jour"
+        },
+        "data_description": {
+          "scan_interval": "Fréquence (en minutes) de récupération des données de l'appareil. Des valeurs plus faibles fournissent des mises à jour plus en temps réel mais augmentent le trafic réseau."
+        }
       }
     }
   },

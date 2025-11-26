@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN, DEFAULT_SCAN_INTERVAL, CONF_IP_ADDRESS, CONF_PORT
+from .const import DOMAIN, DEFAULT_SCAN_INTERVAL, CONF_IP_ADDRESS, CONF_PORT, CONF_SCAN_INTERVAL
 from .udp_client import MarstekUDPClient
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,11 +25,20 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
             hass: Home Assistant instance
             entry: Configuration entry
         """
+        # Get scan interval from options (in minutes) or use default (in seconds)
+        scan_interval_minutes = entry.options.get(CONF_SCAN_INTERVAL)
+        if scan_interval_minutes is not None:
+            # Convert minutes to seconds
+            scan_interval_seconds = scan_interval_minutes * 60
+        else:
+            # Use default (already in seconds)
+            scan_interval_seconds = DEFAULT_SCAN_INTERVAL
+        
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
+            update_interval=timedelta(seconds=scan_interval_seconds),
         )
         
         self.entry = entry

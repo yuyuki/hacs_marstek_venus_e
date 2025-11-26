@@ -14,6 +14,9 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_BLE_MAC,
     CONF_TIMEOUT,
+    CONF_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
     MODE_AUTO,
     MODE_AI,
     MODE_MANUAL,
@@ -311,9 +314,11 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the options."""
-        # Go directly to configure manual mode (API doesn't support reading schedules)
-        return await self.async_step_configure_manual_mode()
+        """Manage the options - show menu."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["configure_manual_mode", "configure_update_interval"],
+        )
     
     async def async_step_configure_manual_mode(
         self, user_input: dict[str, Any] | None = None
@@ -386,6 +391,64 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
             data_schema=schema,
             description_placeholders={
                 "power_info": "Use negative values to charge (e.g., -1000W), positive to discharge (e.g., 1000W). Note: The API does not support reading back schedules, so configure carefully."
+            },
+        )
+    
+    async def async_step_configure_update_interval(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure the update interval."""
+        if user_input is not None:
+            # Get the new interval
+            new_interval = user_input.get("scan_interval")
+            
+            # Update the options
+            new_options = {**self.config_entry.options}
+            new_options[CONF_SCAN_INTERVAL] = new_interval
+            
+            # Get coordinator and update its interval
+            coordinator = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+            if coordinator:
+                from datetime import timedelta
+                # Convert minutes to seconds for the coordinator
+                coordinator.update_interval = timedelta(seconds=new_interval * 60)
+                _LOGGER.info(
+                    "Update interval changed to %d minutes (%d seconds)",
+                    new_interval,
+                    new_interval * 60,
+                )
+            
+            return self.async_create_entry(title="", data=new_options)
+        
+        # Get current interval (in minutes, converting from seconds if stored that way)
+        current_interval_options = self.config_entry.options.get(
+            CONF_SCAN_INTERVAL,
+            DEFAULT_SCAN_INTERVAL / 60,  # Convert default from seconds to minutes
+        )
+        
+        # Define the form schema
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    "scan_interval",
+                    default=current_interval_options,
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=1,
+                        max=60,
+                        step=1,
+                        unit_of_measurement="minutes",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+            }
+        )
+        
+        return self.async_show_form(
+            step_id="configure_update_interval",
+            data_schema=schema,
+            description_placeholders={
+                "info": "Configure how often the integration polls the device for data updates. Lower values provide more real-time data but may increase network traffic."
             },
         )
     
