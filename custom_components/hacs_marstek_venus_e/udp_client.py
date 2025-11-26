@@ -74,13 +74,15 @@ class MarstekUDPClient:
                 )
                 
                 transport.sendto(json.dumps(payload).encode("utf-8"))
-                _LOGGER.debug("Sent %s request to %s:%d", method, self.ip_address, self.port)
+                _LOGGER.debug("Sent %s request to %s:%d with payload: %s", method, self.ip_address, self.port, payload)
                 
                 response = await asyncio.wait_for(
                     protocol.get_response(), timeout=self.timeout
                 )
                 
                 transport.close()
+                
+                _LOGGER.debug("Received raw response from %s:%d: %s", self.ip_address, self.port, response)
                 
                 if "error" in response:
                     error = response.get("error", {})
@@ -89,7 +91,7 @@ class MarstekUDPClient:
                     raise Exception(f"RPC Error: {error_msg}")
                 
                 result = response.get("result", {})
-                _LOGGER.debug("Received response from %s:%d: %s", self.ip_address, self.port, result)
+                _LOGGER.debug("Extracted result from %s:%d: %s", self.ip_address, self.port, result)
                 return result
                 
             except asyncio.TimeoutError:
