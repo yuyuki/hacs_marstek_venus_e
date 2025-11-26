@@ -3,21 +3,92 @@
     "step": {
       "user": {
         "title": "Configuration Marstek Venus E",
-        "description": "Connectez-vous à votre appareil Marstek Venus E. Trouvez l'adresse IP de votre appareil dans la liste des clients DHCP de votre routeur.",
+        "description": "Démarrez le processus de configuration pour trouver et connecter votre appareil Marstek Venus E.",
         "data": {
-          "ip_address": "Adresse IP de l'appareil",
+          "confirm": "Continuer"
+        }
+      },
+      "discovery": {
+        "title": "Découverte des appareils",
+        "description": "Analyse de votre réseau local pour trouver des appareils Marstek..."
+      },
+      "select_device": {
+        "title": "Sélectionner un appareil",
+        "description": "{device_count} appareil(s) trouvé(s). Sélectionnez un appareil dans la liste ci-dessous ou entrez une adresse IP manuellement.",
+        "data": {
+          "ip_address": "Appareil",
           "port": "Port UDP (défaut: 30000)",
+          "ble_mac": "Adresse MAC Bluetooth (optionnel)"
+        }
+      },
+      "manual_ip": {
+        "title": "Entrer l'adresse IP de l'appareil",
+        "description": "Aucun appareil n'a été découvert automatiquement. Veuillez entrer l'adresse IP de votre appareil Marstek Venus E manuellement.",
+        "data": {
+          "ip_address": "Adresse IP",
+          "port": "Port UDP",
           "ble_mac": "Adresse MAC Bluetooth (optionnel)"
         }
       }
     },
     "error": {
       "cannot_connect": "Échec de la connexion à l'appareil. Vérifiez l'adresse IP et le port.",
-      "invalid_ip": "Format d'adresse IP invalide.",
-      "already_configured": "L'appareil est déjà configuré."
+      "no_device_selected": "Veuillez sélectionner un appareil ou entrer une adresse IP.",
+      "invalid_ip": "Format d'adresse IP invalide."
     },
     "abort": {
-      "already_configured": "L'appareil est déjà configuré."
+      "already_configured": "L'appareil est déjà configuré.",
+      "schedule_failed": "Échec de l'enregistrement de la configuration de l'horaire.",
+      "cannot_retrieve_schedules": "Impossible de récupérer les horaires actuels de l'appareil."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configuration Marstek Venus E",
+        "description": "Configurez les paramètres de votre appareil Marstek Venus E",
+        "menu_options": {
+          "configure_manual_mode": "Configurer l'horaire du mode manuel",
+          "view_schedules": "Voir les horaires actuels"
+        }
+      },
+      "configure_manual_mode": {
+        "title": "Configurer l'horaire du mode manuel",
+        "description": "Configurez les horaires de charge/décharge pour le mode Manuel. {power_info}",
+        "data": {
+          "time_slot": "Plage horaire (1-4)",
+          "start_time": "Heure de début",
+          "end_time": "Heure de fin",
+          "days": "Jours actifs",
+          "power": "Puissance (W)",
+          "enable": "Activer cet horaire"
+        },
+        "data_description": {
+          "time_slot": "Sélectionnez la plage horaire à configurer (vous pouvez créer jusqu'à 4 horaires différents)",
+          "start_time": "Quand cet horaire doit commencer chaque jour",
+          "end_time": "Quand cet horaire doit se terminer chaque jour",
+          "days": "Sélectionnez les jours de la semaine où cet horaire est actif",
+          "power": "Puissance de la batterie: valeurs négatives pour charger (ex: -1000W), valeurs positives pour décharger (ex: 1000W)",
+          "enable": "Cochez pour activer cet horaire"
+        }
+      },
+      "view_schedules": {
+        "title": "Horaires actuels",
+        "description": "Horaires actifs sur votre appareil:\n\n{schedules}\n\nRetournez au menu pour configurer les horaires."
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "operating_mode": {
+        "name": "Mode de fonctionnement",
+        "state": {
+          "Auto": "Auto (Autoconsommation)",
+          "AI": "Mode IA",
+          "Manual": "Horaire manuel",
+          "Passive": "Mode passif"
+        }
+      }
     }
   },
   "services": {

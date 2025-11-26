@@ -7,6 +7,11 @@ A comprehensive Home Assistant custom integration for the **Marstek Venus E** ba
 
 ## Features
 
+✅ **Automatic Device Discovery**
+- UDP broadcast discovery on local network
+- Automatic device detection during setup
+- Manual IP entry fallback option
+
 ✅ **Complete Monitoring**
 - Battery status (SOC, temperature, capacity, charge/discharge state)
 - Solar PV generation (power, voltage, current)
@@ -16,17 +21,21 @@ A comprehensive Home Assistant custom integration for the **Marstek Venus E** ba
 - WiFi signal strength
 
 ✅ **Full Control**
-- Switch between operating modes (Auto, AI, Manual, Passive)
-- Configure manual charging schedules
-- Set passive mode power targets
+- **UI Mode Selector**: Change modes directly from Home Assistant UI
+- **UI Schedule Configuration**: Set up charging/discharging schedules through UI (no YAML needed)
+- **Operating Modes**: Auto (Self-Consuming), AI, Manual, Passive
 - Real-time mode changes
+- Up to 4 time-based schedules
 
 ✅ **Home Assistant Integration**
 - Native Energy Dashboard support
 - Service calls for automation
+- Select entity for easy mode switching
+- Options flow for schedule configuration
 - 5-second polling interval
 - Non-blocking async implementation
 - Comprehensive device information
+- Multi-language support (English, French)
 
 ## Installation
 
@@ -53,14 +62,32 @@ A comprehensive Home Assistant custom integration for the **Marstek Venus E** ba
 1. Go to **Settings** → **Devices & Services**
 2. Click **+ Add Integration**
 3. Search for "Marstek Venus E"
-4. Enter your device details:
-   - **IP Address**: Local IP of your Marstek Venus E device
-   - **Port**: UDP port (default: 30000)
-   - **BLE MAC Address**: Optional, leave blank if unknown
+4. **Automatic Discovery**:
+   - The integration scans your network for Marstek devices
+   - Found devices are displayed in a list
+   - Select your device and click Submit
+5. **Manual Configuration** (if no devices found):
+   - Select "Enter IP manually"
+   - Enter device IP address, port (30000), and optional BLE MAC
+   - Click Submit
 
-### Finding Your Device IP
+### Configuring Manual Schedules
 
-You can find your device's IP address in your router's DHCP client list or by using a network scanner app. The device should be connected to your local network via WiFi.
+After adding the integration, you can configure charging/discharging schedules through the UI:
+
+1. Go to **Settings** → **Devices & Services**
+2. Find **Marstek Venus E** integration
+3. Click **Configure** (gear icon)
+4. Select **"Configure Manual Mode Schedule"**
+5. Set up your schedule:
+   - **Time Slot**: Choose 1-4 (you can create 4 different schedules)
+   - **Start/End Time**: When the schedule runs
+   - **Active Days**: Select days of the week
+   - **Power**: Negative to charge (-1000W), positive to discharge (+1000W)
+   - **Enable**: Toggle to activate
+6. Click Submit
+
+You can also view current schedules from the configuration menu.
 
 ## Entities
 
@@ -101,6 +128,13 @@ You can find your device's IP address in your router's DHCP client list or by us
 - `binary_sensor.marstek_venus_e_battery_charging` - Battery charging status
 - `binary_sensor.marstek_venus_e_battery_discharging` - Battery discharging status
 - `binary_sensor.marstek_venus_e_ct_meter_connected` - CT meter connection status
+
+### Select Entities
+- `select.operating_mode` - Change operating mode (Auto, AI, Manual, Passive)
+  - **Auto**: Self-consumption optimization
+  - **AI**: Intelligent mode based on usage patterns
+  - **Manual**: Time-based schedules (configure via integration options)
+  - **Passive**: Fixed power target mode
 
 ## Services
 

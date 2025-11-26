@@ -20,6 +20,15 @@
           "port": "UDP Port (default: 30000)",
           "ble_mac": "Bluetooth MAC Address (optional)"
         }
+      },
+      "manual_ip": {
+        "title": "Enter Device IP Address",
+        "description": "No devices were discovered automatically. Please enter the IP address of your Marstek Venus E device manually.",
+        "data": {
+          "ip_address": "IP Address",
+          "port": "UDP Port",
+          "ble_mac": "Bluetooth MAC Address (optional)"
+        }
       }
     },
     "error": {
@@ -28,7 +37,58 @@
       "invalid_ip": "Invalid IP address format."
     },
     "abort": {
-      "already_configured": "Device is already configured."
+      "already_configured": "Device is already configured.",
+      "schedule_failed": "Failed to save schedule configuration.",
+      "cannot_retrieve_schedules": "Unable to retrieve current schedules from device."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Marstek Venus E Configuration",
+        "description": "Configure your Marstek Venus E device settings",
+        "menu_options": {
+          "configure_manual_mode": "Configure Manual Mode Schedule",
+          "view_schedules": "View Current Schedules"
+        }
+      },
+      "configure_manual_mode": {
+        "title": "Configure Manual Mode Schedule",
+        "description": "Set up charging/discharging schedules for Manual mode. {power_info}",
+        "data": {
+          "time_slot": "Time Slot (1-4)",
+          "start_time": "Start Time",
+          "end_time": "End Time",
+          "days": "Active Days",
+          "power": "Power (W)",
+          "enable": "Enable this schedule"
+        },
+        "data_description": {
+          "time_slot": "Select which time slot to configure (you can create up to 4 different schedules)",
+          "start_time": "When this schedule should start each day",
+          "end_time": "When this schedule should end each day",
+          "days": "Select which days of the week this schedule is active",
+          "power": "Battery power: negative values charge (e.g., -1000W), positive values discharge (e.g., 1000W)",
+          "enable": "Check to activate this schedule"
+        }
+      },
+      "view_schedules": {
+        "title": "Current Schedules",
+        "description": "Active schedules on your device:\n\n{schedules}\n\nReturn to the menu to configure schedules."
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "operating_mode": {
+        "name": "Operating Mode",
+        "state": {
+          "Auto": "Auto (Self-Consuming)",
+          "AI": "AI Mode",
+          "Manual": "Manual Schedule",
+          "Passive": "Passive Mode"
+        }
+      }
     }
   },
   "services": {

@@ -78,6 +78,14 @@ class MarstekBinarySensor(CoordinatorEntity, BinarySensorEntity):
         
         # Create unique ID
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{sensor_id}"
+        
+        # Device info for grouping
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry_id)},
+            "name": f"Marstek Venus E",
+            "manufacturer": "Marstek",
+            "model": "Venus E",
+        }
 
     @property
     def is_on(self) -> bool | None:

@@ -9,7 +9,7 @@
   "homeassistant": "2025.11.0",
   "iot_class": "Local Polling",
   "issue_tracker": "https://github.com/YOUR-USERNAME/marstek-venus-e/issues",
-  "platforms": ["sensor", "binary_sensor"],
+  "platforms": ["sensor", "binary_sensor", "select"],
   "services": {
     "set_mode": {
       "name": "Set Operating Mode",

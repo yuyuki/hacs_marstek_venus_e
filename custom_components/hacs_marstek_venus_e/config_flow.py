@@ -9,8 +9,18 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import selector
 
-from .const import DOMAIN, CONF_BLE_MAC, CONF_TIMEOUT
+from .const import (
+    DOMAIN,
+    CONF_BLE_MAC,
+    CONF_TIMEOUT,
+    MODE_AUTO,
+    MODE_AI,
+    MODE_MANUAL,
+    MODE_PASSIVE,
+    VALID_MODES,
+)
 from .udp_client import MarstekUDPClient
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,6 +35,11 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize config flow."""
         super().__init__()
         self.discovered_devices: list[tuple[str, int, dict[str, Any]]] = []
+    
+    @staticmethod
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> MarstekOptionsFlow:
+        """Get the options flow for this handler."""
+        return MarstekOptionsFlow(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -224,3 +239,171 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """
 
         return await self.async_step_select_device(import_data)
+
+
+class MarstekOptionsFlow(config_entries.OptionsFlow):
+    """Handle options flow for Marstek Venus E."""
+    
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+        self.current_schedule: dict[str, Any] = {}
+    
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the options."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=[
+                "configure_manual_mode",
+                "view_schedules",
+            ],
+        )
+    
+    async def async_step_configure_manual_mode(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure manual mode schedules."""
+        if user_input is not None:
+            # Save the schedule configuration
+            time_num = user_input.get("time_slot")
+            
+            # Get coordinator to send the configuration
+            coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id)
+            if coordinator:
+                try:
+                    await coordinator.set_manual_schedule(
+                        time_num=time_num,
+                        start_time=user_input.get("start_time"),
+                        end_time=user_input.get("end_time"),
+                        week_set=self._calculate_week_set(user_input.get("days", [])),
+                        power=user_input.get("power"),
+                        enable=user_input.get("enable", True),
+                    )
+                    return self.async_create_entry(title="", data={})
+                except Exception as err:
+                    _LOGGER.error("Error setting manual schedule: %s", err)
+                    return self.async_abort(reason="schedule_failed")
+        
+        # Define the form schema
+        schema = vol.Schema(
+            {
+                vol.Required("time_slot", default=1): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=1,
+                        max=4,
+                        step=1,
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Required("start_time"): selector.TimeSelector(),
+                vol.Required("end_time"): selector.TimeSelector(),
+                vol.Required("days", default=[]): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            {"label": "Monday", "value": "monday"},
+                            {"label": "Tuesday", "value": "tuesday"},
+                            {"label": "Wednesday", "value": "wednesday"},
+                            {"label": "Thursday", "value": "thursday"},
+                            {"label": "Friday", "value": "friday"},
+                            {"label": "Saturday", "value": "saturday"},
+                            {"label": "Sunday", "value": "sunday"},
+                        ],
+                        multiple=True,
+                        mode=selector.SelectSelectorMode.LIST,
+                    )
+                ),
+                vol.Required("power", default=0): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=-10000,
+                        max=10000,
+                        step=100,
+                        unit_of_measurement="W",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Optional("enable", default=True): selector.BooleanSelector(),
+            }
+        )
+        
+        return self.async_show_form(
+            step_id="configure_manual_mode",
+            data_schema=schema,
+            description_placeholders={
+                "power_info": "Use negative values to charge (e.g., -1000W), positive to discharge (e.g., 1000W)"
+            },
+        )
+    
+    async def async_step_view_schedules(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """View current schedules."""
+        coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id)
+        if coordinator:
+            try:
+                schedules = await coordinator.get_schedule()
+                schedule_info = self._format_schedules(schedules)
+                
+                return self.async_show_form(
+                    step_id="view_schedules",
+                    data_schema=vol.Schema({}),
+                    description_placeholders={"schedules": schedule_info},
+                )
+            except Exception as err:
+                _LOGGER.error("Error retrieving schedules: %s", err)
+        
+        return self.async_abort(reason="cannot_retrieve_schedules")
+    
+    def _calculate_week_set(self, days: list[str]) -> int:
+        """Calculate week_set bitmask from day names."""
+        day_map = {
+            "monday": 1,
+            "tuesday": 2,
+            "wednesday": 4,
+            "thursday": 8,
+            "friday": 16,
+            "saturday": 32,
+            "sunday": 64,
+        }
+        
+        week_set = 0
+        for day in days:
+            week_set |= day_map.get(day, 0)
+        
+        return week_set if week_set > 0 else 127  # Default to all days if none selected
+    
+    def _format_schedules(self, schedules: dict[str, Any]) -> str:
+        """Format schedules for display."""
+        if not schedules or "manual_cfg" not in schedules:
+            return "No schedules configured"
+        
+        manual_cfg = schedules.get("manual_cfg", [])
+        if not manual_cfg:
+            return "No manual schedules configured"
+        
+        lines = []
+        for idx, schedule in enumerate(manual_cfg, 1):
+            enabled = "✓" if schedule.get("enable") else "✗"
+            start = schedule.get("start_time", "??:??")
+            end = schedule.get("end_time", "??:??")
+            power = schedule.get("power", 0)
+            week_set = schedule.get("week_set", 0)
+            days = self._decode_week_set(week_set)
+            
+            lines.append(f"Slot {idx} [{enabled}]: {start}-{end}, {power}W, {days}")
+        
+        return "\n".join(lines)
+    
+    def _decode_week_set(self, week_set: int) -> str:
+        """Decode week_set bitmask to day names."""
+        if week_set == 127:
+            return "All days"
+        
+        days = []
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        for i, name in enumerate(day_names):
+            if week_set & (1 << i):
+                days.append(name)
+        
+        return ", ".join(days) if days else "No days"
