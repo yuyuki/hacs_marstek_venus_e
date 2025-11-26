@@ -26,10 +26,11 @@ from .udp_client import MarstekUDPClient
 _LOGGER = logging.getLogger(__name__)
 
 
-class MarstekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class MarstekConfigFlow(config_entries.ConfigFlow):
     """Config flow for Marstek Venus E."""
 
     VERSION = 1
+    DOMAIN = DOMAIN
     
     def __init__(self):
         """Initialize config flow."""
