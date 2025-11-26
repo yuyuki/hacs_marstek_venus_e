@@ -75,23 +75,16 @@ class MarstekOperatingModeSelect(CoordinatorEntity, SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return the current operating mode."""
-        if self.coordinator.data:
-            # Try to get mode from different possible locations in the response
-            mode = None
-            
-            # Check in energy system status
-            es_status = self.coordinator.data.get("es_status", {})
-            mode = es_status.get("mode")
-            
-            # Check in root level
-            if mode is None:
-                mode = self.coordinator.data.get("mode")
-            
-            # Check in operating_mode attribute
-            if mode is None:
-                mode = self.coordinator.data.get(ATTR_OPERATING_MODE)
-            
-            if mode and mode in VALID_MODES:
+        # First try to get mode from mode_data (ES.GetMode response)
+        if self.coordinator.mode_data and "mode" in self.coordinator.mode_data:
+            mode = self.coordinator.mode_data["mode"]
+            if mode in VALID_MODES:
+                return mode
+        
+        # Fallback to main data (mode was copied there in coordinator update)
+        if self.coordinator.data and "mode" in self.coordinator.data:
+            mode = self.coordinator.data["mode"]
+            if mode in VALID_MODES:
                 return mode
         
         return None

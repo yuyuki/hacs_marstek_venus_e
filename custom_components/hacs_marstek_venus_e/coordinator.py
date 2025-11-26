@@ -63,6 +63,18 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             # Get energy system status - this includes all key metrics
             data = await self.client.get_energy_system_status()
+            
+            # Also get mode data - ES.GetMode returns mode, ongrid_power, offgrid_power, bat_soc
+            # Store in mode_data for sensors that need it
+            try:
+                self.mode_data = await self.client.get_energy_system_mode()
+                # Add mode to main data for easy access
+                if "mode" in self.mode_data:
+                    data["mode"] = self.mode_data["mode"]
+            except Exception as mode_err:
+                _LOGGER.warning("Failed to get mode data: %s", mode_err)
+                # Don't fail the entire update if mode fetch fails
+            
             return data
         except Exception as err:
             _LOGGER.error("Failed to get device data: %s", err)

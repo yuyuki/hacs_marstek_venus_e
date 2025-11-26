@@ -230,7 +230,16 @@ SENSORS_CT_BINARY: Final = {
     },
 }
 
-SENSORS_SYSTEM: Final = {}
+# Operating mode sensor from ES.GetMode
+SENSORS_SYSTEM: Final = {
+    "operating_mode": {
+        "name": "Operating Mode",
+        "icon": "mdi:cog",
+        "device_class": None,
+        "attr": "mode",
+        "source": "auto",  # Mode is added to main data by coordinator
+    },
+}
 
 # Combine all sensors
 ALL_SENSORS: Final = {

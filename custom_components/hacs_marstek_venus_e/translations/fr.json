@@ -85,13 +85,18 @@
     }
   },
   "entity": {
+    "sensor": {
+      "operating_mode": {
+        "name": "Mode de fonctionnement"
+      }
+    },
     "select": {
       "operating_mode": {
         "name": "Mode de fonctionnement",
         "state": {
           "Auto": "Auto (Autoconsommation)",
           "AI": "Mode IA",
-          "Manual": "Programmation manuelle",
+          "Manual": "Planning manuel",
           "Passive": "Mode passif"
         }
       }

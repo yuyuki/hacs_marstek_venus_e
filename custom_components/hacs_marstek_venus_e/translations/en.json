@@ -85,6 +85,11 @@
     }
   },
   "entity": {
+    "sensor": {
+      "operating_mode": {
+        "name": "Operating Mode"
+      }
+    },
     "select": {
       "operating_mode": {
         "name": "Operating Mode",
