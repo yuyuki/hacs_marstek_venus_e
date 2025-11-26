@@ -25,7 +25,19 @@ spec.loader.exec_module(udp_client_module)
 MarstekUDPClient = udp_client_module.MarstekUDPClient
 
 
-async def test_es_set_mode(ip_address: str, mode: str, port: int = 30000, timeout: float = 10.0):
+async def test_es_set_mode(
+    ip_address: str,
+    mode: str,
+    port: int = 30000,
+    timeout: float = 10.0,
+    manual_time_num: int = 1,
+    manual_start_time: str = "08:30",
+    manual_end_time: str = "20:30",
+    manual_week_set: int = 127,
+    manual_power: int = 100,
+    clear_manual_schedules: bool = False,
+    disable_slot: bool = False,
+):
     """Test ES.SetMode.
     
     This function tests setting the operating mode.
@@ -35,6 +47,13 @@ async def test_es_set_mode(ip_address: str, mode: str, port: int = 30000, timeou
         mode: Operating mode to set (Auto, AI, Manual, or Passive)
         port: Device port
         timeout: Request timeout in seconds
+        manual_time_num: Manual mode schedule slot (0-9)
+        manual_start_time: Manual mode start time (HH:MM)
+        manual_end_time: Manual mode end time (HH:MM)
+        manual_week_set: Manual mode week days bitmask (127 = all days)
+        manual_power: Manual mode power in watts (100-800, negative=charge, positive=discharge)
+        clear_manual_schedules: If True, clear all manual schedules (no manual_cfg sent)
+        disable_slot: If True, disable the specified time slot (only time_num and enable=0)
         
     Returns:
         True if test passed, False otherwise
@@ -88,12 +107,83 @@ async def test_es_set_mode(ip_address: str, mode: str, port: int = 30000, timeou
         # Set new mode
         print(f"[INFO] Sending ES.SetMode request to change mode to: {mode}")
         
-        # Build the expected payload for display
-        mode_cfg_key = f"{mode.lower()}_cfg"
-        print(f"[INFO] Request payload:")
-        print(f'[INFO]   {{"id": 1, "method": "ES.SetMode", "params": {{"id": 0, "config": {{"mode": "{mode}", "{mode_cfg_key}": {{"enable": 1}}}}}}}}\n')
+        # Build the config and payload for display based on mode
+        manual_cfg = None
+        if mode == "Manual":
+            if clear_manual_schedules:
+                print(f"[INFO] ⚠ CLEARING ALL MANUAL SCHEDULES")
+                print(f"[INFO] Sending Manual mode WITHOUT manual_cfg to delete all time slots")
+                print()
+            elif disable_slot:
+                manual_cfg = {
+                    "time_num": manual_time_num,
+                    "enable": 0,
+                }
+                print(f"[INFO] ⚠ DISABLING TIME SLOT {manual_time_num}")
+                print(f"[INFO] Sending only time_num and enable=0 to disable this slot")
+                print()
+            else:
+                manual_cfg = {
+                    "time_num": manual_time_num,
+                    "start_time": manual_start_time,
+                    "end_time": manual_end_time,
+                    "week_set": manual_week_set,
+                    "power": manual_power,
+                    "enable": 1,
+                }
+                print(f"[INFO] Manual schedule configuration:")
+                print(f"[INFO]   Time slot: {manual_time_num} (0-9)")
+                print(f"[INFO]   Time: {manual_start_time} - {manual_end_time}")
+                print(f"[INFO]   Week days: {manual_week_set} (127 = all days)")
+                action = 'CHARGE' if manual_power < 0 else 'DISCHARGE' if manual_power > 0 else 'IDLE'
+                print(f"[INFO]   Power: {manual_power}W ({action}) [Range: 100-800W]")
+                print()
         
-        response = await client.set_mode(mode)
+        # Build the expected payload for display
+        print(f"[INFO] Request payload:")
+        if mode == "Manual":
+            if clear_manual_schedules:
+                # Send Manual mode without manual_cfg to clear schedules
+                payload_str = json.dumps({
+                    "id": 1,
+                    "method": "ES.SetMode",
+                    "params": {
+                        "id": 0,
+                        "config": {
+                            "mode": mode
+                        }
+                    }
+                }, indent=2)
+            elif disable_slot or manual_cfg:
+                # Send Manual mode with manual_cfg (either to disable or configure)
+                payload_str = json.dumps({
+                    "id": 1,
+                    "method": "ES.SetMode",
+                    "params": {
+                        "id": 0,
+                        "config": {
+                            "mode": mode,
+                            "manual_cfg": manual_cfg
+                        }
+                    }
+                }, indent=2)
+            else:
+                payload_str = json.dumps({
+                    "id": 1,
+                    "method": "ES.SetMode",
+                    "params": {
+                        "id": 0,
+                        "config": {
+                            "mode": mode
+                        }
+                    }
+                }, indent=2)
+            print(f"[INFO] {payload_str}\n")
+        else:
+            mode_cfg_key = f"{mode.lower()}_cfg"
+            print(f'[INFO]   {{"id": 1, "method": "ES.SetMode", "params": {{"id": 0, "config": {{"mode": "{mode}", "{mode_cfg_key}": {{"enable": 1}}}}}}}}\n')
+        
+        response = await client.set_mode(mode, manual_cfg=manual_cfg)
         
         print("[OK] Response received successfully!\n")
         print("Response Data:")
@@ -162,7 +252,7 @@ async def test_es_set_mode(ip_address: str, mode: str, port: int = 30000, timeou
         return False
 
 
-async def discover_and_test(mode: str):
+async def discover_and_test(mode: str, clear_manual_schedules: bool = False, disable_slot: bool = False, **kwargs):
     """Discover device first, then test ES.SetMode."""
     print("\n" + "="*80)
     print("MARSTEK VENUS E - ES.SetMode TEST")
@@ -181,7 +271,7 @@ async def discover_and_test(mode: str):
             print(f"[OK] Found device at {ip_address}:{port}")
             print(f"[INFO] Testing ES.SetMode on discovered device...\n")
             
-            success = await test_es_set_mode(ip_address, mode, port)
+            success = await test_es_set_mode(ip_address, mode, port, clear_manual_schedules=clear_manual_schedules, disable_slot=disable_slot, **kwargs)
             sys.exit(0 if success else 1)
         else:
             print("[FAIL] No devices found during discovery")
@@ -205,10 +295,20 @@ async def main():
         print("  python tests/test_es_set_mode.py --mode <mode>  (auto-discover)")
         print("\nRequired:")
         print("  --mode <mode>        Operating mode: Auto, AI, Manual, or Passive")
-        print("\nOptions:")
+        print("Options:")
         print("  --ip <address>       Device IP address")
         print("  --port <port>        Device port (default: 30000)")
         print("  --timeout <seconds>  Request timeout (default: 10.0)")
+        print("\nManual Mode Options:")
+        print("  --mtimenum <0-9>     Time slot number (default: 1)")
+        print("  --mstart <HH:MM>     Start time (default: 08:30)")
+        print("  --mend <HH:MM>       End time (default: 20:30)")
+        print("  --mweek <bitmask>    Week days bitmask (default: 127 = all days)")
+        print("                       1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun")
+        print("  --mpower <watts>     Power in watts (default: 100, range: 100-800)")
+        print("                       Negative = charge, Positive = discharge")
+        print("  --clear              Clear all manual schedules (no manual_cfg sent)")
+        print("  --disable            Disable a specific time slot (only time_num + enable=0)")
         print("\nModes:")
         print("  Auto     - Automatic operation based on battery SOC and grid")
         print("  AI       - AI-optimized operation for maximum efficiency")
@@ -217,6 +317,7 @@ async def main():
         print("\nExamples:")
         print("  python tests/test_es_set_mode.py --ip 192.168.0.225 --mode Auto")
         print("  python tests/test_es_set_mode.py --ip 192.168.0.225 --mode Manual")
+        print("  python tests/test_es_set_mode.py --ip 192.168.0.225 --mode Manual --mpower -500  # Charge at 500W")
         print("  python tests/test_es_set_mode.py --mode AI  (auto-discover)")
         print("\nTesting Workflow:")
         print("  1. Run this test with one mode")
@@ -254,6 +355,15 @@ async def main():
     port = 30000
     timeout = 10.0
     
+    # Manual mode parameters
+    manual_time_num = 1
+    manual_start_time = "08:30"
+    manual_end_time = "20:30"
+    manual_week_set = 127
+    manual_power = 100
+    clear_manual_schedules = False
+    disable_slot = False
+    
     # Parse --ip argument
     if "--ip" in sys.argv:
         try:
@@ -281,6 +391,57 @@ async def main():
             print("[ERROR] --timeout requires a valid number")
             sys.exit(1)
     
+    # Parse --clear and --disable flags
+    if "--clear" in sys.argv:
+        clear_manual_schedules = True
+    
+    if "--disable" in sys.argv:
+        disable_slot = True
+    
+    # Parse manual mode arguments
+    if "--mtimenum" in sys.argv:
+        try:
+            idx = sys.argv.index("--mtimenum")
+            manual_time_num = int(sys.argv[idx + 1])
+            if manual_time_num < 0 or manual_time_num > 9:
+                print("[ERROR] --mtimenum must be between 0 and 9")
+                sys.exit(1)
+        except (IndexError, ValueError):
+            print("[ERROR] --mtimenum requires a valid number (0-9)")
+            sys.exit(1)
+    
+    if "--mstart" in sys.argv:
+        try:
+            idx = sys.argv.index("--mstart")
+            manual_start_time = sys.argv[idx + 1]
+        except IndexError:
+            print("[ERROR] --mstart requires a time in HH:MM format")
+            sys.exit(1)
+    
+    if "--mend" in sys.argv:
+        try:
+            idx = sys.argv.index("--mend")
+            manual_end_time = sys.argv[idx + 1]
+        except IndexError:
+            print("[ERROR] --mend requires a time in HH:MM format")
+            sys.exit(1)
+    
+    if "--mweek" in sys.argv:
+        try:
+            idx = sys.argv.index("--mweek")
+            manual_week_set = int(sys.argv[idx + 1])
+        except (IndexError, ValueError):
+            print("[ERROR] --mweek requires a valid number")
+            sys.exit(1)
+    
+    if "--mpower" in sys.argv:
+        try:
+            idx = sys.argv.index("--mpower")
+            manual_power = int(sys.argv[idx + 1])
+        except (IndexError, ValueError):
+            print("[ERROR] --mpower requires a valid number")
+            sys.exit(1)
+    
     # Run test
     if ip_address:
         print("\n" + "="*80)
@@ -290,10 +451,32 @@ async def main():
         print("Purpose: Change operating mode")
         print("="*80)
         
-        success = await test_es_set_mode(ip_address, mode, port, timeout)
+        success = await test_es_set_mode(
+            ip_address,
+            mode,
+            port,
+            timeout,
+            manual_time_num,
+            manual_start_time,
+            manual_end_time,
+            manual_week_set,
+            manual_power,
+            clear_manual_schedules,
+            disable_slot,
+        )
         sys.exit(0 if success else 1)
     else:
-        await discover_and_test(mode)
+        await discover_and_test(
+            mode,
+            clear_manual_schedules=clear_manual_schedules,
+            disable_slot=disable_slot,
+            timeout=timeout,
+            manual_time_num=manual_time_num,
+            manual_start_time=manual_start_time,
+            manual_end_time=manual_end_time,
+            manual_week_set=manual_week_set,
+            manual_power=manual_power,
+        )
 
 
 if __name__ == "__main__":

@@ -20,12 +20,12 @@ set_manual_schedule:
   fields:
     time_num:
       name: Time Slot Number
-      description: Time slot number (1-4)
+      description: Time slot number (0-9)
       required: true
       selector:
         number:
-          min: 1
-          max: 4
+          min: 0
+          max: 9
           step: 1
           mode: slider
     start_time:
@@ -99,3 +99,7 @@ set_passive_mode:
           step: 60
           unit_of_measurement: "s"
           mode: box
+
+clear_all_schedules:
+  name: Clear All Manual Schedules
+  description: Disable all manual charging/discharging schedules (slots 0-9)

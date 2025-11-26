@@ -29,12 +29,20 @@
           "port": "UDP Port",
           "ble_mac": "Bluetooth MAC Address (optional)"
         }
+      },
+      "clear_schedules": {
+        "title": "Clear Manual Schedules?",
+        "description": "Do you want to clear all existing manual schedules? {info}",
+        "data": {
+          "clear_schedules": "Clear all manual schedules (10 time slots)"
+        }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect to device. Check IP address and port.",
       "no_device_selected": "Please select a device or enter an IP address.",
-      "invalid_ip": "Invalid IP address format."
+      "invalid_ip": "Invalid IP address format.",
+      "clear_failed": "Failed to clear schedules. The device might not be reachable."
     },
     "abort": {
       "already_configured": "Device is already configured.",
@@ -103,6 +111,10 @@
     "set_passive_mode": {
       "name": "Set Passive Mode",
       "description": "Set passive mode with a specific power target"
+    },
+    "clear_all_schedules": {
+      "name": "Clear All Manual Schedules",
+      "description": "Disable all manual charging/discharging schedules (slots 0-9)"
     }
   }
 }

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="Marstek Venus E" width="400">
+</p>
+
 # Marstek Venus E - Home Assistant Integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)

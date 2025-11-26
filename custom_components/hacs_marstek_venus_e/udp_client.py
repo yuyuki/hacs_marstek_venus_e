@@ -167,11 +167,20 @@ class MarstekUDPClient:
         """
         return await self.get_battery_status()
 
-    async def set_mode(self, mode: str) -> dict[str, Any]:
+    async def set_mode(
+        self,
+        mode: str,
+        manual_cfg: dict[str, Any] | None = None,
+        passive_cfg: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Set operating mode.
         
         Args:
             mode: Mode name (Auto, AI, Manual, Passive)
+            manual_cfg: Manual mode configuration (for Manual mode)
+                       Should contain: time_num, start_time, end_time, week_set, power, enable
+            passive_cfg: Passive mode configuration (for Passive mode)
+                        Should contain: power, cd_time, enable
             
         Returns:
             Response from device
@@ -184,9 +193,13 @@ class MarstekUDPClient:
         elif mode == "AI":
             config["ai_cfg"] = {"enable": 1}
         elif mode == "Manual":
-            config["manual_cfg"] = {"enable": 1}
+            if manual_cfg is not None:
+                config["manual_cfg"] = manual_cfg
+            # If manual_cfg is None, don't add it (allows clearing schedules)
         elif mode == "Passive":
-            config["passive_cfg"] = {"enable": 1}
+            if passive_cfg is not None:
+                config["passive_cfg"] = passive_cfg
+            # If passive_cfg is None, don't add it
         
         return await self._send_request("ES.SetMode", {"id": 0, "config": config})
 
@@ -239,6 +252,43 @@ class MarstekUDPClient:
             "ES.SetPassiveMode",
             {"id": 0, "power": power, "cd_time": cd_time},
         )
+
+    async def clear_all_manual_schedules(self) -> dict[str, Any]:
+        """Clear all manual schedules by disabling all time slots (0-9).
+        
+        Returns:
+            Dictionary with results for each slot
+        """
+        results = {
+            "success_count": 0,
+            "failed_slots": [],
+            "total_slots": 10,
+        }
+        
+        # Disable each slot from 0 to 9
+        for slot_num in range(10):
+            manual_cfg = {
+                "time_num": slot_num,
+                "start_time": "00:00",
+                "end_time": "23:59",
+                "week_set": 127,
+                "power": 100,
+                "enable": 0,
+            }
+            
+            try:
+                response = await self.set_mode("Manual", manual_cfg=manual_cfg)
+                
+                if response.get("set_result"):
+                    results["success_count"] += 1
+                else:
+                    results["failed_slots"].append(slot_num)
+                    
+            except Exception as err:
+                _LOGGER.error("Failed to disable slot %d: %s", slot_num, err)
+                results["failed_slots"].append(slot_num)
+        
+        return results
 
     @staticmethod
     async def discover(timeout: float = 15.0, port: int = 30000) -> list[tuple[str, int, dict[str, Any]]]:

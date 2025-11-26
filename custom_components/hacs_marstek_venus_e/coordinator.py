@@ -117,3 +117,13 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
         """
         await self.client.set_passive_mode(power=power, cd_time=cd_time)
         await self.async_request_refresh()
+
+    async def clear_all_manual_schedules(self) -> dict[str, Any]:
+        """Clear all manual schedules.
+        
+        Returns:
+            Dictionary with operation results
+        """
+        results = await self.client.clear_all_manual_schedules()
+        await self.async_request_refresh()
+        return results

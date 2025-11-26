@@ -27,7 +27,7 @@ SERVICE_SET_MODE_SCHEMA = vol.Schema(
 
 SERVICE_SET_MANUAL_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required("time_num"): vol.All(vol.Coerce(int), vol.Range(min=1, max=4)),
+        vol.Required("time_num"): vol.All(vol.Coerce(int), vol.Range(min=0, max=9)),
         vol.Required("start_time"): cv.time,
         vol.Required("end_time"): cv.time,
         vol.Required("week_set"): vol.All(vol.Coerce(int), vol.Range(min=1, max=127)),
@@ -135,6 +135,31 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         "set_passive_mode",
         set_passive_mode_handler,
         schema=SERVICE_SET_PASSIVE_MODE_SCHEMA,
+    )
+
+    async def clear_all_schedules_handler(call: ServiceCall) -> None:
+        """Handle clear_all_schedules service call.
+        
+        Args:
+            call: Service call object
+        """
+        for entry_id, coordinator in hass.data[DOMAIN].items():
+            try:
+                results = await coordinator.clear_all_manual_schedules()
+                _LOGGER.info(
+                    "Cleared manual schedules: %d/%d slots disabled",
+                    results["success_count"],
+                    results["total_slots"],
+                )
+                if results["failed_slots"]:
+                    _LOGGER.warning("Failed to disable slots: %s", results["failed_slots"])
+            except Exception as err:
+                _LOGGER.error("Error clearing manual schedules: %s", err)
+
+    hass.services.async_register(
+        DOMAIN,
+        "clear_all_schedules",
+        clear_all_schedules_handler,
     )
 
     _LOGGER.debug("Services registered for %s", DOMAIN)

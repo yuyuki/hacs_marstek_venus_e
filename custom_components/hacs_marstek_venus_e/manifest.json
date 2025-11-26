@@ -1,15 +1,15 @@
 {
-  "domain": "marstek_venus_e",
+  "domain": "hacs_marstek_venus_e",
   "name": "Marstek Venus E",
-  "codeowners": ["@YOUR-USERNAME"],
+  "codeowners": ["@yuyuki"],
   "config_flow": true,
-  "documentation": "https://github.com/YOUR-USERNAME/marstek-venus-e",
+  "documentation": "https://github.com/yuyuki/hacs_marstek_venus_e",
   "requirements": [],
   "version": "1.0.0",
   "homeassistant": "2025.11.0",
   "iot_class": "Local Polling",
-  "issue_tracker": "https://github.com/YOUR-USERNAME/marstek-venus-e/issues",
-  "platforms": ["sensor", "binary_sensor", "select"],
+  "issue_tracker": "https://github.com/yuyuki/hacs_marstek_venus_e/issues",
+  "platforms": ["sensor", "binary_sensor", "select", "button"],
   "services": {
     "set_mode": {
       "name": "Set Operating Mode",
@@ -22,6 +22,10 @@
     "set_passive_mode": {
       "name": "Set Passive Mode",
       "description": "Set passive mode with a power target"
+    },
+    "clear_all_schedules": {
+      "name": "Clear All Manual Schedules",
+      "description": "Disable all manual charging/discharging schedules"
     }
   }
 }
