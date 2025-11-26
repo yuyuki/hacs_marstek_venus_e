@@ -348,10 +348,10 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
         # Define the form schema
         schema = vol.Schema(
             {
-                vol.Required("time_slot", default=1): selector.NumberSelector(
+                vol.Required("time_slot", default=0): selector.NumberSelector(
                     selector.NumberSelectorConfig(
-                        min=1,
-                        max=4,
+                        min=0,
+                        max=9,
                         step=1,
                         mode=selector.NumberSelectorMode.SLIDER,
                     )

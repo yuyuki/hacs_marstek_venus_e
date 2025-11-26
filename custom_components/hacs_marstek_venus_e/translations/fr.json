@@ -53,18 +53,18 @@
         }
       },
       "configure_manual_mode": {
-        "title": "Configurer l'horaire du mode manuel",
+        "title": "Configurer le Planning Manuel",
         "description": "Configurez les horaires de charge/décharge pour le mode Manuel. {power_info}",
         "data": {
-          "time_slot": "Plage horaire (1-4)",
-          "start_time": "Heure de début",
-          "end_time": "Heure de fin",
-          "days": "Jours actifs",
+          "time_slot": "Plage Horaire (0-9)",
+          "start_time": "Heure de Début",
+          "end_time": "Heure de Fin",
+          "days": "Jours Actifs",
           "power": "Puissance (W)",
-          "enable": "Activer cet horaire"
+          "enable": "Activer ce planning"
         },
         "data_description": {
-          "time_slot": "Sélectionnez la plage horaire à configurer (vous pouvez créer jusqu'à 4 horaires différents)",
+          "time_slot": "Sélectionnez la plage horaire à configurer (vous pouvez créer jusqu'à 10 plannings différents)",
           "start_time": "Quand cet horaire doit commencer chaque jour",
           "end_time": "Quand cet horaire doit se terminer chaque jour",
           "days": "Sélectionnez les jours de la semaine où cet horaire est actif",

@@ -64,7 +64,7 @@
         "title": "Configure Manual Mode Schedule",
         "description": "Set up charging/discharging schedules for Manual mode. {power_info}",
         "data": {
-          "time_slot": "Time Slot (1-4)",
+          "time_slot": "Time Slot (0-9)",
           "start_time": "Start Time",
           "end_time": "End Time",
           "days": "Active Days",
@@ -72,7 +72,7 @@
           "enable": "Enable this schedule"
         },
         "data_description": {
-          "time_slot": "Select which time slot to configure (you can create up to 4 different schedules)",
+          "time_slot": "Select which time slot to configure (you can create up to 10 different schedules)",
           "start_time": "When this schedule should start each day",
           "end_time": "When this schedule should end each day",
           "days": "Select which days of the week this schedule is active",
