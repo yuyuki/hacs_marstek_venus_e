@@ -14,6 +14,9 @@
 - **Integration Type**: Custom Component (HACS compatible)
 - **API Protocol**: UDP JSON-RPC (port 30000)
 
+### lOCAL Api Details
+The integration is based on the version 1.0 (2025-08-09)
+
 ## Project Overview
 
 This is a Home Assistant custom integration for the **Marstek Venus E** battery energy storage system. It provides local control and monitoring via UDP communication.
@@ -41,6 +44,10 @@ This is a Home Assistant custom integration for the **Marstek Venus E** battery 
    - `button.py` - Action buttons
 6. **`services.py`** - Service implementations
 7. **`const.py`** - Constants and configuration
+8. **`translations/`** - Language files for localization
+9. **`tests/`** - Unit and integration tests
+10. **`doc/`** - Documentation files
+11. **`readme.md`** - User-facing documentation
 
 ### Important Patterns
 
@@ -58,10 +65,103 @@ class MarstekSensor(CoordinatorEntity, SensorEntity):
         self.entity_description = description
 ```
 
-#### Device Discovery
-- Uses UDP broadcast to find devices
-- Manual IP entry as fallback
-- Device identification via SN (serial number)
+## Guidelines for Integration Development
+
+### General instructions to follow
+
+#### General purpose
+As the local API of the Marstek Venus E device is not really stable. respect the following guidelines when developing or extending this integration:
+- 30 secondes between each UDP request
+- 30 secondes timeout for UDP requests
+- Retry up to 3 times on timeout errors
+- Log payload and response for debugging purposes
+- Respect the protocol explained here
+- Do not log error for timeouts, only debug log
+- Log payload and response in case of errors
+
+#### Protocol Handling
+The integration uses UDP communication with JSON-RPC, ensure that all interactions with the device are handled asynchronously to avoid blocking the Home Assistant event loop. Use the DataUpdateCoordinator pattern to manage periodic data fetching and state updates for entities.
+
+## Protocol description
+
+### Marstek.GetDevice
+To discover Marstek devices within the LAN, a UDP broadcast is utilized. The broadcast content 
+is as follows:
+
+Payload:
+```json
+{
+    "id": 0,
+    "method": "Marstek.GetDevice", 
+    "params": {
+        "ble_mac":"0" 
+    }
+}
+```
+
+Response (sample):
+```json
+{
+    "id": 0,                      // = device_id : An identifier established by the Client.
+    "src": "VenusC-123456789012", 
+    "result": {
+        "device":"VenusC", 
+        "ver":111, 
+        "ble_mac":"123456789012", // = ble_mac : Bluetooth MAC address of the device
+        "wifi_mac":"123456789012", 
+        "wifi_name":"MY_HOME", 
+        "ip":"192.168.1.11"
+    }
+}
+```
+
+Important :
+- the device_id must be reuse to ALL others calls to the device. It's its identifier. If we have several devices, each one will have its own device_id.
+- the ble_mac in the request is used to filter the response. If set to "0", all devices will respond. It must be saved for later calls.
+
+### Marstek.GetDevice 
+It locates Marstek devices on the local area network and get these information: Device model, firmware version, Bluetooth MAC addresses, WiFi MAC address, WiFi name, Device IP.
+```json
+{
+    "id": 0,                      // = 0 (need to ensure it's always 0 for this method)
+    "method": "Marstek.GetDevice", 
+    "params": {
+        "ble_mac":"123456789012"  // = ble_mac : it must be the ble_mac retrieved during the discovery
+    }
+}
+```
+
+Response (sample):
+```json
+{
+    "id": 0,
+    "src": "VenusC-123456789012", 
+    "result": {
+        "device":"VenusC", 
+        "ver":111, 
+        "ble_mac":"123456789012", 
+        "wifi_mac":"012123456789", 
+        "wifi_name"："MY_HOME", 
+        "ip":"192.168.1.11"
+    }
+}
+```
+
+### Wifi.GetStatus
+
+### BLE.GetStatus
+
+### Bat.GetStatus
+
+### PV.GetStatus 
+
+### ES.GetStatus 
+
+### ES.SetMode 
+
+### ES.GetMode
+
+### EM.GetStatus
 
 #### Entity Naming
 - Use descriptive unique_id: `f"{device_sn}_{sensor_type}"`
@@ -115,26 +215,25 @@ The `udp_client.py` implements JSON-RPC over UDP:
 ```python
 # Request format
 {
-    "method": "es.get.status",
-    "params": [],
-    "id": 1
+    "id": 0,             // device_id : An identifier established by the Client.
+    "method": "string",  // Marstek.GetDevice | ES.GetStatus | ES.SetMode
+    "params": {
+        "id":0 
+    }
 }
 
 # Response format
 {
-    "result": {...},
-    "error": null,
-    "id": 1
+    "id": 0,            // device_id : An identifier established by the Client.
+    "method": "string",
+    "params": {
+       
+    }
 }
 ```
 
 **Important UDP Methods**:
-- `es.get.status` - Get device status (battery, PV, grid)
-- `es.get.mode` - Get current operating mode
-- `es.set.mode` - Set operating mode
-- `es.get.schedule` - Get manual schedules
-- `es.set.schedule` - Configure schedules
-- `es.get.device` - Get device information (SN, version, WiFi)
+
 
 ### Testing
 
@@ -227,10 +326,11 @@ Maintain consistency across all translation files.
 - **Passive**: Fixed power target
 
 ### Schedule Configuration
-- 4 time slots available
-- Week bitmask (1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun)
-- Power: negative = charge, positive = discharge
-- Time format: "HH:MM"
+- 0-10 time slots available
+- Week bitmask (1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun, 127=All days)
+- Power: negative = charge, positive = discharge with a range of 100-800W
+- Time format: "HH:MM" with startTime < endTime
+- Enable/Disable each slot individually
 
 ### API Quirks
 - UDP responses may timeout - implement retry logic
