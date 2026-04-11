@@ -50,9 +50,9 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
         # Storage for manual API call results
         self.battery_data: dict[str, Any] = {}
         self.mode_data: dict[str, Any] = {}
-        # Track last battery data update (every 10 minutes instead of 30 seconds)
+        # Track last battery data update (every 5 minutes instead of 30 seconds)
         self._last_battery_update: datetime | None = None
-        self._battery_update_interval = timedelta(minutes=10)
+        self._battery_update_interval = timedelta(minutes=5)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from device.
@@ -67,7 +67,7 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
             # Get energy system status - this includes all key metrics (every 30 seconds)
             data = await self.client.get_energy_system_status()
             
-            # Get battery status every 10 minutes to avoid draining battery with frequent requests
+            # Get battery status every 5 minutes to avoid draining battery with frequent requests
             now = datetime.now()
             if self._last_battery_update is None or (now - self._last_battery_update) >= self._battery_update_interval:
                 try:

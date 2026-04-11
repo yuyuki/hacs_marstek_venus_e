@@ -26,6 +26,13 @@ All notable changes to the Marstek Venus E Home Assistant Integration will be do
 
 - **Data Merge Logic**: Corrected coordinator's EM/ES data merging to prevent zero values from overriding actual measurements
 
+- **Manual Schedule Configuration - Critical Fix**:
+  - Fixed `set_manual_schedule` service that had no effect on battery behavior
+  - Replaced non-functional `ES.SetSchedule` API call with proper implementation
+  - Now retrieves current schedule configuration, modifies specific slot, and sets complete manual configuration
+  - Ensures device is properly set to Manual mode with updated schedule slots
+  - `marstek_venus_e.set_manual_schedule` service now works correctly
+
 ### Technical Details
 - Added datetime import and `_last_battery_update` tracking in coordinator
 - Implemented `_battery_update_interval = timedelta(minutes=10)` for battery status refresh throttling
