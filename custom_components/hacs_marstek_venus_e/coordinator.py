@@ -93,9 +93,15 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
                     if "output_energy" in em_data:
                         em_data["output_energy"] = round(em_data.get("output_energy", 0) * 0.1, 1)
                     
-                    # Merge with mode_data (mode_data takes precedence)
+                    # Merge with mode_data
+                    # For CT power data (a_power, b_power, c_power, total_power), prefer EM.GetStatus
+                    # as ES.GetMode may return zeros if CT is not in active mode
                     if self.mode_data:
-                        self.mode_data.update({k: v for k, v in em_data.items() if k not in self.mode_data})
+                        ct_fields = {"a_power", "b_power", "c_power", "total_power"}
+                        for k, v in em_data.items():
+                            # Prefer EM data for CT fields, otherwise prefer mode_data
+                            if k not in self.mode_data or (k in ct_fields and self.mode_data.get(k) == 0):
+                                self.mode_data[k] = v
                     else:
                         self.mode_data = em_data
             except Exception as em_err:

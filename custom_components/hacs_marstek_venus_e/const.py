@@ -218,6 +218,8 @@ SENSORS_CT: Final = {
         "icon": "mdi:lightning-bolt",
         "device_class": "power",
         "attr": "c_power",
+        "source": "mode",  # From ES.GetMode
+    },
     "ct_input_energy": {
         "name": "CT Input Energy",
         "unit": "Wh",
@@ -235,8 +237,6 @@ SENSORS_CT: Final = {
         "state_class": "total_increasing",
         "attr": "output_energy",
         "source": "mode",  # From ES.GetMode - multiply by 0.1
-    },
-        "source": "mode",  # From ES.GetMode
     },
     "total_ct_power": {
         "name": "Total CT Power",
