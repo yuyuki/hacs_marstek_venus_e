@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -50,6 +50,9 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
         # Storage for manual API call results
         self.battery_data: dict[str, Any] = {}
         self.mode_data: dict[str, Any] = {}
+        # Track last battery data update (every 10 minutes instead of 30 seconds)
+        self._last_battery_update: datetime | None = None
+        self._battery_update_interval = timedelta(minutes=10)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from device.
@@ -61,16 +64,19 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
             UpdateFailed: If data fetch fails
         """
         try:
-            # Get energy system status - this includes all key metrics
+            # Get energy system status - this includes all key metrics (every 30 seconds)
             data = await self.client.get_energy_system_status()
             
-            # Get battery status for temperature, rated capacity, and charging/discharging flags
-            try:
-                self.battery_data = await self.client.get_battery_status()
-                _LOGGER.debug("Battery data updated: %s", self.battery_data)
-            except Exception as battery_err:
-                _LOGGER.debug("Failed to get battery data: %s", battery_err)
-                # Battery data is optional, don't fail the entire update
+            # Get battery status every 10 minutes to avoid draining battery with frequent requests
+            now = datetime.now()
+            if self._last_battery_update is None or (now - self._last_battery_update) >= self._battery_update_interval:
+                try:
+                    self.battery_data = await self.client.get_battery_status()
+                    self._last_battery_update = now
+                    _LOGGER.debug("Battery data updated: %s", self.battery_data)
+                except Exception as battery_err:
+                    _LOGGER.debug("Failed to get battery data: %s", battery_err)
+                    # Battery data is optional, don't fail the entire update
             
             # Also get mode data - ES.GetMode returns mode, ongrid_power, offgrid_power, bat_soc, CT data
             # Store in mode_data for sensors that need it
