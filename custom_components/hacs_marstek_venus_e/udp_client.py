@@ -172,6 +172,17 @@ class MarstekUDPClient:
         """
         return await self._send_request("ES.GetSchedule", {"id": 0})
 
+    async def set_schedule(self, schedules: list[dict[str, Any]]) -> dict[str, Any]:
+        """Set complete manual schedule configuration.
+        
+        Args:
+            schedules: List of schedule configurations for all slots
+            
+        Returns:
+            Response from device
+        """
+        return await self._send_request("ES.SetSchedule", {"id": 0, "schedules": schedules})
+
     # Keep old methods for backwards compatibility
     async def get_realtime_data(self) -> dict[str, Any]:
         """Get real-time data from device (alias for get_energy_system_status).
@@ -236,9 +247,8 @@ class MarstekUDPClient:
     ) -> dict[str, Any]:
         """Set manual charging/discharging schedule.
 
-        This method configures a specific schedule slot by first retrieving the current
-        manual configuration, modifying the specified slot, and then setting the complete
-        configuration back to the device.
+        This method configures a specific schedule slot by retrieving current schedules,
+        modifying the specified slot, and sending the complete configuration.
 
         Args:
             time_num: Time slot number (0-9)
@@ -251,32 +261,53 @@ class MarstekUDPClient:
         Returns:
             Response from device
         """
-        # First, get current mode configuration to see existing schedules
         try:
-            current_mode = await self.get_energy_system_mode()
-            current_manual_cfg = current_mode.get("manual_cfg", [])
-        except Exception:
-            # If we can't get current config, start with empty list
-            current_manual_cfg = []
-
-        # Ensure we have a list of 10 slots (0-9)
-        if not isinstance(current_manual_cfg, list):
-            current_manual_cfg = []
-
-        # Extend list to ensure we have at least 10 slots
-        while len(current_manual_cfg) < 10:
-            current_manual_cfg.append({
-                "time_num": len(current_manual_cfg),
-                "start_time": "00:00",
-                "end_time": "23:59",
-                "week_set": 127,
-                "power": 100,
-                "enable": 0,
-            })
-
-        # Update the specific slot
-        if 0 <= time_num < 10:
-            current_manual_cfg[time_num] = {
+            # Get current schedule configuration
+            current_config = await self.get_schedule()
+            
+            # Extract schedules array
+            schedules = []
+            if "schedules" in current_config:
+                schedules = current_config["schedules"]
+            elif "manual_cfg" in current_config and isinstance(current_config["manual_cfg"], list):
+                schedules = current_config["manual_cfg"]
+            elif isinstance(current_config, list):
+                schedules = current_config
+            
+            # Ensure we have at least 10 slots (0-9)
+            while len(schedules) < 10:
+                schedules.append({
+                    "time_num": len(schedules),
+                    "start_time": "00:00",
+                    "end_time": "00:00", 
+                    "week_set": 0,
+                    "power": 0,
+                    "enable": 0
+                })
+            
+            # Update the specific slot
+            if 0 <= time_num < len(schedules):
+                schedules[time_num] = {
+                    "time_num": time_num,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "week_set": week_set,
+                    "power": power,
+                    "enable": 1 if enable else 0,
+                }
+            
+            # Send complete schedule configuration
+            result = await self.set_schedule(schedules)
+            
+            # Also set mode to Manual to ensure schedules take effect
+            await self.set_mode("Manual")
+            
+            return result
+            
+        except Exception as err:
+            _LOGGER.error("Failed to set manual schedule: %s", err)
+            # Fallback to old method if new approach fails
+            manual_cfg = {
                 "time_num": time_num,
                 "start_time": start_time,
                 "end_time": end_time,
@@ -284,9 +315,7 @@ class MarstekUDPClient:
                 "power": power,
                 "enable": 1 if enable else 0,
             }
-
-        # Set the device to Manual mode with the updated configuration
-        return await self.set_mode("Manual", manual_cfg=current_manual_cfg)
+            return await self.set_mode("Manual", manual_cfg=manual_cfg)
 
     async def set_passive_mode(self, power: int, cd_time: int = 0) -> dict[str, Any]:
         """Set passive mode with power target.

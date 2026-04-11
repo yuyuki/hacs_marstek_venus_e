@@ -65,12 +65,12 @@ set_manual_schedule:
             - Discharging
     power:
       name: Power
-      description: Power magnitude in watts (100-800W)
+      description: Power magnitude in watts (100-2500W)
       required: true
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box
@@ -150,13 +150,13 @@ change_operating_mode:
         time:
     slot_0_power:
       name: Slot 0 - Power (W)
-      description: Power for slot 0 (100-800W)
+      description: Power for slot 0 (100-2500W)
       required: false
       default: 100
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box
@@ -202,13 +202,13 @@ change_operating_mode:
         time:
     slot_1_power:
       name: Slot 1 - Power (W)
-      description: Power for slot 1 (100-800W)
+      description: Power for slot 1 (100-2500W)
       required: false
       default: 100
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box
@@ -254,13 +254,13 @@ change_operating_mode:
         time:
     slot_2_power:
       name: Slot 2 - Power (W)
-      description: Power for slot 2 (100-800W)
+      description: Power for slot 2 (100-2500W)
       required: false
       default: 100
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box
@@ -306,13 +306,13 @@ change_operating_mode:
         time:
     slot_3_power:
       name: Slot 3 - Power (W)
-      description: Power for slot 3 (100-800W)
+      description: Power for slot 3 (100-2500W)
       required: false
       default: 100
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box
@@ -358,13 +358,13 @@ change_operating_mode:
         time:
     slot_4_power:
       name: Slot 4 - Power (W)
-      description: Power for slot 4 (100-800W)
+      description: Power for slot 4 (100-2500W)
       required: false
       default: 100
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box

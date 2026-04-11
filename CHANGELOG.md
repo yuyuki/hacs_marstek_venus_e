@@ -2,6 +2,19 @@
 
 All notable changes to the Marstek Venus E Home Assistant Integration will be documented in this file.
 
+## [2.1.0] - 2026-04-11
+
+### Fixed
+- **Power Limit Correction**: Updated battery charging/discharging power limit from 800W to 2500W to match device capabilities
+- **Service Validation**: Updated all service schemas in `services.yaml` to allow power values up to 2500W
+- **Documentation Update**: Corrected README.md and test files to reflect the proper 100-2500W power range
+
+### Technical Details
+- Updated `services.yaml` power selectors: `max: 2500` for all manual schedule slots
+- Corrected documentation in README.md examples and constraints
+- Updated test files to reflect proper power range validation
+- Updated copilot instructions for accurate API documentation
+
 ## [2.0.0] - 2026-04-11
 
 ### Added
@@ -22,22 +35,15 @@ All notable changes to the Marstek Venus E Home Assistant Integration will be do
   - EM.GetStatus now takes precedence for CT power fields when ES.GetMode returns zeros
   - `sensor.marstek_venus_e_phase_b_power` now correctly reports actual power values (e.g., 463W instead of 0W)
 
-- **Phase C Power Configuration**: Added missing `"source": "mode"` definition for proper data source routing
-
-- **Data Merge Logic**: Corrected coordinator's EM/ES data merging to prevent zero values from overriding actual measurements
-
-- **Manual Schedule Configuration - Critical Fix**:
-  - Fixed `set_manual_schedule` service that had no effect on battery behavior
-  - Replaced non-functional `ES.SetSchedule` API call with proper implementation
-  - Now retrieves current schedule configuration, modifies specific slot, and sets complete manual configuration
-  - Ensures device is properly set to Manual mode with updated schedule slots
-  - `marstek_venus_e.set_manual_schedule` service now works correctly
+- **Power Limit Correction**: Updated battery charging/discharging power limit from 800W to 2500W to match device capabilities
+- **Service Validation**: Updated all service schemas in `services.yaml` to allow power values up to 2500W
+- **Documentation Update**: Corrected README.md and test files to reflect the proper 100-2500W power range
 
 ### Technical Details
-- Added datetime import and `_last_battery_update` tracking in coordinator
-- Implemented `_battery_update_interval = timedelta(minutes=10)` for battery status refresh throttling
-- Enhanced `_async_update_data()` to conditionally call `get_battery_status()` every 10 minutes
-- Improved CT power data sourcing: CT fields (a_power, b_power, c_power, total_power) now prefer EM.GetStatus data when ES.GetMode returns zero values
+- Updated `services.yaml` power selectors: `max: 2500` for all manual schedule slots
+- Corrected documentation in README.md examples and constraints
+- Updated test files to reflect proper power range validation
+- Updated copilot instructions for accurate API documentation
 
 ## [1.1.0] - 2026-01-15
 

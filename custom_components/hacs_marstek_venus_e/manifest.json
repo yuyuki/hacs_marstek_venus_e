@@ -5,7 +5,7 @@
   "config_flow": true,
   "documentation": "https://github.com/yuyuki/hacs_marstek_venus_e",
   "requirements": [],
-  "version": "2.0.0",
+  "version": "2.1.0",
   "homeassistant": "2025.11.0",
   "iot_class": "Local Polling",
   "issue_tracker": "https://github.com/yuyuki/hacs_marstek_venus_e/issues",

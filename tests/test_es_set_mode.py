@@ -51,7 +51,7 @@ async def test_es_set_mode(
         manual_start_time: Manual mode start time (HH:MM)
         manual_end_time: Manual mode end time (HH:MM)
         manual_week_set: Manual mode week days bitmask (127 = all days)
-        manual_power: Manual mode power in watts (100-800, negative=charge, positive=discharge)
+        manual_power: Manual mode power in watts (100-2500, negative=charge, positive=discharge)
         clear_manual_schedules: If True, clear all manual schedules (no manual_cfg sent)
         disable_slot: If True, disable the specified time slot (only time_num and enable=0)
         
@@ -136,7 +136,7 @@ async def test_es_set_mode(
                 print(f"[INFO]   Time: {manual_start_time} - {manual_end_time}")
                 print(f"[INFO]   Week days: {manual_week_set} (127 = all days)")
                 action = 'CHARGE' if manual_power < 0 else 'DISCHARGE' if manual_power > 0 else 'IDLE'
-                print(f"[INFO]   Power: {manual_power}W ({action}) [Range: 100-800W]")
+                print(f"[INFO]   Power: {manual_power}W ({action}) [Range: 100-2500W]")
                 print()
         
         # Build the expected payload for display
@@ -305,7 +305,7 @@ async def main():
         print("  --mend <HH:MM>       End time (default: 20:30)")
         print("  --mweek <bitmask>    Week days bitmask (default: 127 = all days)")
         print("                       1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun")
-        print("  --mpower <watts>     Power in watts (default: 100, range: 100-800)")
+        print("  --mpower <watts>     Power in watts (default: 100, range: 100-2500)")
         print("                       Negative = charge, Positive = discharge")
         print("  --clear              Clear all manual schedules (no manual_cfg sent)")
         print("  --disable            Disable a specific time slot (only time_num + enable=0)")
