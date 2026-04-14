@@ -618,8 +618,8 @@ This integration uses the Marstek Device Local API (UDP JSON-RPC). For complete 
 
 ##  11. <a name='Support'></a>Support
 
-- **Issues**: [GitHub Issues](https://github.com/YOUR-USERNAME/marstek-venus-e/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/YOUR-USERNAME/marstek-venus-e/discussions)
+- **Issues**: [GitHub Issues](https://github.com/yuyuki/hacs_marstek_venus_e/issues)
+#- **Discussions**: [GitHub Discussions](https://github.com/yuyuki/marstek-venus-e/discussions)
 - **Home Assistant Community**: [Community Forum](https://community.home-assistant.io/)
 
 ##  12. <a name='Contributing'></a>Contributing
