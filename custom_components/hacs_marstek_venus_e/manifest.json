@@ -5,7 +5,7 @@
   "config_flow": true,
   "documentation": "https://github.com/yuyuki/hacs_marstek_venus_e",
   "requirements": [],
-  "version": "1.0.0",
+  "version": "2.1.0",
   "homeassistant": "2025.11.0",
   "iot_class": "Local Polling",
   "issue_tracker": "https://github.com/yuyuki/hacs_marstek_venus_e/issues",
@@ -26,6 +26,18 @@
     "clear_all_schedules": {
       "name": "Clear All Manual Schedules",
       "description": "Disable all manual charging/discharging schedules"
+    },
+    "set_dod": {
+      "name": "Set Battery Depth of Discharge",
+      "description": "Configure the battery depth of discharge (DOD) value"
+    },
+    "set_ble_adv": {
+      "name": "Control Bluetooth Advertising",
+      "description": "Enable or disable Bluetooth advertising"
+    },
+    "set_led_ctrl": {
+      "name": "Control LED",
+      "description": "Turn the device LED on or off"
     }
   }
 }

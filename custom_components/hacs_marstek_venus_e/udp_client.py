@@ -149,12 +149,39 @@ class MarstekUDPClient:
         return await self._send_request("ES.GetStatus", {"id": 0})
 
     async def get_energy_system_mode(self) -> dict[str, Any]:
-        """Get operating mode.
+        """Get operating mode and CT meter data.
         
         Returns:
-            Dictionary containing mode information
+            Dictionary containing mode information and CT meter data
         """
         return await self._send_request("ES.GetMode", {"id": 0})
+
+    async def get_energy_meter_status(self) -> dict[str, Any]:
+        """Get energy meter (CT) status.
+        
+        Returns:
+            Dictionary containing energy meter status
+        """
+        return await self._send_request("EM.GetStatus", {"id": 0})
+
+    async def get_schedule(self) -> dict[str, Any]:
+        """Get manual schedule configuration.
+        
+        Returns:
+            Dictionary containing schedule configuration
+        """
+        return await self._send_request("ES.GetSchedule", {"id": 0})
+
+    async def set_schedule(self, schedules: list[dict[str, Any]]) -> dict[str, Any]:
+        """Set complete manual schedule configuration.
+        
+        Args:
+            schedules: List of schedule configurations for all slots
+            
+        Returns:
+            Response from device
+        """
+        return await self._send_request("ES.SetSchedule", {"id": 0, "schedules": schedules})
 
     # Keep old methods for backwards compatibility
     async def get_realtime_data(self) -> dict[str, Any]:
@@ -219,30 +246,76 @@ class MarstekUDPClient:
         enable: bool = True,
     ) -> dict[str, Any]:
         """Set manual charging/discharging schedule.
-        
+
+        This method configures a specific schedule slot by retrieving current schedules,
+        modifying the specified slot, and sending the complete configuration.
+
         Args:
-            time_num: Time slot number (1-4)
+            time_num: Time slot number (0-9)
             start_time: Start time (HH:MM format)
             end_time: End time (HH:MM format)
             week_set: Week bitmask (1=Mon, 2=Tue, ..., 64=Sun, 127=All)
             power: Power in watts (negative=charge, positive=discharge)
             enable: Enable the schedule
-            
+
         Returns:
             Response from device
         """
-        return await self._send_request(
-            "ES.SetSchedule",
-            {
-                "id": 0,
+        try:
+            # Get current schedule configuration
+            current_config = await self.get_schedule()
+            
+            # Extract schedules array
+            schedules = []
+            if "schedules" in current_config:
+                schedules = current_config["schedules"]
+            elif "manual_cfg" in current_config and isinstance(current_config["manual_cfg"], list):
+                schedules = current_config["manual_cfg"]
+            elif isinstance(current_config, list):
+                schedules = current_config
+            
+            # Ensure we have at least 10 slots (0-9)
+            while len(schedules) < 10:
+                schedules.append({
+                    "time_num": len(schedules),
+                    "start_time": "00:00",
+                    "end_time": "00:00", 
+                    "week_set": 0,
+                    "power": 0,
+                    "enable": 0
+                })
+            
+            # Update the specific slot
+            if 0 <= time_num < len(schedules):
+                schedules[time_num] = {
+                    "time_num": time_num,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "week_set": week_set,
+                    "power": power,
+                    "enable": 1 if enable else 0,
+                }
+            
+            # Send complete schedule configuration
+            result = await self.set_schedule(schedules)
+            
+            # Also set mode to Manual to ensure schedules take effect
+            await self.set_mode("Manual")
+            
+            return result
+            
+        except Exception as err:
+            _LOGGER.error("Failed to set manual schedule: %s", err)
+            # Fallback to old method if new approach fails
+            manual_cfg = {
                 "time_num": time_num,
                 "start_time": start_time,
                 "end_time": end_time,
                 "week_set": week_set,
                 "power": power,
-                "enable": enable,
-            },
-        )
+                "enable": 1 if enable else 0,
+            }
+            return await self.set_mode("Manual", manual_cfg=manual_cfg)
 
     async def set_passive_mode(self, power: int, cd_time: int = 0) -> dict[str, Any]:
         """Set passive mode with power target.
@@ -261,7 +334,7 @@ class MarstekUDPClient:
 
     async def clear_all_manual_schedules(self) -> dict[str, Any]:
         """Clear all manual schedules by disabling all time slots (0-9).
-        
+
         Returns:
             Dictionary with results for each slot
         """
@@ -270,7 +343,7 @@ class MarstekUDPClient:
             "failed_slots": [],
             "total_slots": 10,
         }
-        
+
         # Disable each slot from 0 to 9
         for slot_num in range(10):
             manual_cfg = {
@@ -281,20 +354,61 @@ class MarstekUDPClient:
                 "power": 100,
                 "enable": 0,
             }
-            
+
             try:
                 response = await self.set_mode("Manual", manual_cfg=manual_cfg)
-                
+
                 if response.get("set_result"):
                     results["success_count"] += 1
                 else:
                     results["failed_slots"].append(slot_num)
-                    
+
             except Exception as err:
                 _LOGGER.error("Failed to disable slot %d: %s", slot_num, err)
                 results["failed_slots"].append(slot_num)
-        
+
         return results
+
+    async def set_dod(self, value: int) -> dict[str, Any]:
+        """Set battery depth of discharge (DOD).
+        
+        Args:
+            value: DOD value (30-88)
+            
+        Returns:
+            Response from device
+        """
+        if not (30 <= value <= 88):
+            raise ValueError(f"DOD value must be between 30 and 88, got {value}")
+        
+        _LOGGER.debug("Setting DOD to %d%%", value)
+        return await self._send_request("DOD.SET", {"value": value})
+
+    async def set_ble_adv(self, enable: bool) -> dict[str, Any]:
+        """Control Bluetooth advertising.
+        
+        Args:
+            enable: True to enable advertising, False to disable
+            
+        Returns:
+            Response from device
+        """
+        enable_value = 0 if enable else 1  # 0 = enable, 1 = disable
+        _LOGGER.debug("Setting Bluetooth advertising to %s", "enabled" if enable else "disabled")
+        return await self._send_request("Ble.Adv", {"enable": enable_value})
+
+    async def set_led_ctrl(self, enabled: bool) -> dict[str, Any]:
+        """Control LED on the device panel.
+        
+        Args:
+            enabled: True to turn LED on, False to turn off
+            
+        Returns:
+            Response from device
+        """
+        state = 1 if enabled else 0
+        _LOGGER.debug("Setting LED to %s", "on" if enabled else "off")
+        return await self._send_request("Led.Ctrl", {"state": state})
 
     @staticmethod
     async def discover(timeout: float = 15.0, port: int = 30000) -> list[tuple[str, int, dict[str, Any]]]:

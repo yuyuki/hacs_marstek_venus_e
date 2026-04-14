@@ -328,7 +328,7 @@ Maintain consistency across all translation files.
 ### Schedule Configuration
 - 0-10 time slots available
 - Week bitmask (1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun, 127=All days)
-- Power: negative = charge, positive = discharge with a range of 100-800W
+- Power: negative = charge, positive = discharge with a range of 100-2500W
 - Time format: "HH:MM" with startTime < endTime
 - Enable/Disable each slot individually
 

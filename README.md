@@ -241,14 +241,14 @@ data:
   end_time: "17:00"  # MUST be greater than start_time
   week_set: 127  # All days (byte-based: 1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun)
   mode: "Charging"  # "Charging" or "Discharging"
-  power: 500  # 100-800W magnitude (always positive)
+  power: 500  # 100-2500W magnitude (always positive)
   enable: true
 ```
 
 **Important Constraints:**
 - `end_time` must be greater than `start_time`
 - `mode` must be "Charging" (negative power) or "Discharging" (positive power)
-- `power` magnitude must be between 100 and 800 watts (always positive)
+- `power` magnitude must be between 100 and 2500 watts (always positive)
 - `week_set` uses byte-based bitmask
 
 **Week Set Bitmask:**
@@ -470,7 +470,7 @@ automation:
           end_time: "06:00"
           week_set: 127  # All days
           mode: "Charging"
-          power: 800  # Charge at 800W
+          power: 2500  # Charge at 2500W (maximum)
           enable: true
       
       # Slot 1: Morning peak discharge (weekdays)
@@ -520,7 +520,7 @@ automation:
           start_time: "01:00"
           end_time: "07:00"  # Must be > start_time
           week_set: 127  # Every day
-          power: 800  # Maximum (800W)
+          power: 2500  # Maximum (2500W)
           enable: true
       - service: marstek_venus_e.set_mode
         data:

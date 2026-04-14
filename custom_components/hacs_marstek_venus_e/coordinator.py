@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -50,6 +50,9 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
         # Storage for manual API call results
         self.battery_data: dict[str, Any] = {}
         self.mode_data: dict[str, Any] = {}
+        # Track last battery data update (every 60 minutes instead of 30 seconds)
+        self._last_battery_update: datetime | None = None
+        self._battery_update_interval = timedelta(minutes=60)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from device.
@@ -61,19 +64,63 @@ class MarstekDataUpdateCoordinator(DataUpdateCoordinator):
             UpdateFailed: If data fetch fails
         """
         try:
-            # Get energy system status - this includes all key metrics
+            # Get energy system status - this includes all key metrics (every 30 seconds)
             data = await self.client.get_energy_system_status()
             
-            # Also get mode data - ES.GetMode returns mode, ongrid_power, offgrid_power, bat_soc
+            # Get battery status every 5 minutes to avoid draining battery with frequent requests
+            now = datetime.now()
+            if self._last_battery_update is None or (now - self._last_battery_update) >= self._battery_update_interval:
+                try:
+                    self.battery_data = await self.client.get_battery_status()
+                    self._last_battery_update = now
+                    _LOGGER.debug("Battery data updated: %s", self.battery_data)
+                except Exception as battery_err:
+                    _LOGGER.debug("Failed to get battery data: %s", battery_err)
+                    # Battery data is optional, don't fail the entire update
+            
+            # Also get mode data - ES.GetMode returns mode, ongrid_power, offgrid_power, bat_soc, CT data
             # Store in mode_data for sensors that need it
             try:
                 self.mode_data = await self.client.get_energy_system_mode()
                 # Add mode to main data for easy access
                 if "mode" in self.mode_data:
                     data["mode"] = self.mode_data["mode"]
+                
+                # Add CT meter data to mode_data (ES.GetMode includes it)
+                # Apply scaling for energy values (*0.1 as per API documentation)
+                if "input_energy" in self.mode_data:
+                    self.mode_data["input_energy"] = round(self.mode_data.get("input_energy", 0) * 0.1, 1)
+                if "output_energy" in self.mode_data:
+                    self.mode_data["output_energy"] = round(self.mode_data.get("output_energy", 0) * 0.1, 1)
             except Exception as mode_err:
                 _LOGGER.warning("Failed to get mode data: %s", mode_err)
                 # Don't fail the entire update if mode fetch fails
+            
+            # Also try to get EM status for additional meter data
+            try:
+                em_data = await self.client.get_energy_meter_status()
+                # Merge EM data into mode_data if available
+                if em_data:
+                    # Apply scaling for EM energy values too
+                    if "input_energy" in em_data:
+                        em_data["input_energy"] = round(em_data.get("input_energy", 0) * 0.1, 1)
+                    if "output_energy" in em_data:
+                        em_data["output_energy"] = round(em_data.get("output_energy", 0) * 0.1, 1)
+                    
+                    # Merge with mode_data
+                    # For CT power data (a_power, b_power, c_power, total_power), prefer EM.GetStatus
+                    # as ES.GetMode may return zeros if CT is not in active mode
+                    if self.mode_data:
+                        ct_fields = {"a_power", "b_power", "c_power", "total_power"}
+                        for k, v in em_data.items():
+                            # Prefer EM data for CT fields, otherwise prefer mode_data
+                            if k not in self.mode_data or (k in ct_fields and self.mode_data.get(k) == 0):
+                                self.mode_data[k] = v
+                    else:
+                        self.mode_data = em_data
+            except Exception as em_err:
+                _LOGGER.debug("Failed to get EM status (expected if not available): %s", em_err)
+                # EM.GetStatus is optional and may not be available on all devices
             
             return data
         except Exception as err:

@@ -5,8 +5,9 @@ DOMAIN: Final = "hacs_marstek_venus_e"
 
 # Device Configuration
 DEFAULT_PORT: Final = 30000
-DEFAULT_SCAN_INTERVAL: Final = 300  # seconds (5 minutes)
-DEFAULT_TIMEOUT: Final = 20.0  # seconds - UDP request timeout
+DEFAULT_SCAN_INTERVAL: Final = 60  # seconds (1 minute)
+DEFAULT_TIMEOUT: Final = 30.0  # seconds - UDP request timeout (API requires 30s)
+MIN_TIME_BETWEEN_REQUESTS: Final = 30.0  # seconds - minimum time between UDP requests per API spec
 
 # Modes
 MODE_AUTO: Final = "Auto"
@@ -62,13 +63,23 @@ ATTR_WIFI_SSID: Final = "wifi_ssid"
 # Operating Mode
 ATTR_OPERATING_MODE: Final = "operating_mode"
 
+# CT Energy Attributes (from ES.GetMode/EM.GetStatus)
+ATTR_CT_INPUT_ENERGY: Final = "ct_input_energy"
+ATTR_CT_OUTPUT_ENERGY: Final = "ct_output_energy"
+
+# DOD Configuration
+ATTR_DOD_VALUE: Final = "dod_value"
+DOD_MIN: Final = 30
+DOD_MAX: Final = 88
+DOD_DEFAULT: Final = 88
+
 # Sensors Configuration
 # Sensors from ES.GetStatus (automatic updates)
 SENSORS_BATTERY: Final = {
     "battery_state_of_charge": {
         "name": "Battery State of Charge",
         "unit": "%",
-        "icon": "mdi:battery-percent",
+        #"icon": "mdi:battery-percent",
         "device_class": "battery",
         "attr": "bat_soc",
         "source": "auto",  # From ES.GetStatus
@@ -208,6 +219,24 @@ SENSORS_CT: Final = {
         "device_class": "power",
         "attr": "c_power",
         "source": "mode",  # From ES.GetMode
+    },
+    "ct_input_energy": {
+        "name": "CT Input Energy",
+        "unit": "Wh",
+        "icon": "mdi:lightning-bolt-circle",
+        "device_class": "energy",
+        "state_class": "total_increasing",
+        "attr": "input_energy",
+        "source": "mode",  # From ES.GetMode - multiply by 0.1
+    },
+    "ct_output_energy": {
+        "name": "CT Output Energy",
+        "unit": "Wh",
+        "icon": "mdi:lightning-bolt-circle",
+        "device_class": "energy",
+        "state_class": "total_increasing",
+        "attr": "output_energy",
+        "source": "mode",  # From ES.GetMode - multiply by 0.1
     },
     "total_ct_power": {
         "name": "Total CT Power",
