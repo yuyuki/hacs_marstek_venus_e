@@ -152,10 +152,11 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain="hacs_marstek_venus_e"
             for ip, port, payload in self.discovered_devices:
                 device_info = payload.get("result", {})
                 device_name = device_info.get("device", "Unknown")
+                device_ip = device_info.get("ip", ip)
                 src = payload.get("src", "Unknown")
-                # Format: IP - Device Name [src]
-                label = f"{ip} - {device_name} [{src}]"
-                device_options[ip] = label
+                # Format: Device IP - Device Name [src]
+                label = f"{device_ip} - {device_name} [{src}]"
+                device_options[device_ip] = label
         
         # Add manual entry option
         device_options["manual"] = "Enter IP manually"

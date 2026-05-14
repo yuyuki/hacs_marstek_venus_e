@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import logging
+import socket
 from typing import Any
 
 from .const import DEFAULT_TIMEOUT
@@ -403,7 +405,6 @@ class MarstekUDPClient:
         Returns a list of tuples: (ip, port, parsed_json_response).
         Deduplicates responses by IP address and filters out invalid responses.
         """
-        import socket
         import time
         
         probe = {
@@ -417,7 +418,8 @@ class MarstekUDPClient:
         probe_json = json.dumps(probe)
         probe_bytes = probe_json.encode("utf-8")
         
-        # Create socket bound to the discovery port (important!)
+        # Create socket bound to the discovery port when possible. Some environments
+        # already use the port, so we fall back to an ephemeral source port if bind fails.
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -431,10 +433,14 @@ class MarstekUDPClient:
             _LOGGER.debug("Bound to UDP port %d for discovery responses", port)
         except OSError as err:
             _LOGGER.warning("Could not bind to UDP port %d: %s - discovery may fail", port, err)
-        
+
         sock.settimeout(1.0)  # Short timeout for individual recv attempts
-        
-        responses: dict[str, tuple[str, int, dict[str, Any]]] = {}  # Use dict to deduplicate by IP
+
+        local_ips = set(MarstekUDPClient._get_local_ipv4_addresses())
+        broadcast_targets = MarstekUDPClient._get_discovery_targets(port, local_ips=local_ips)
+        _LOGGER.debug("Discovery broadcast targets: %s", broadcast_targets)
+
+        responses: dict[str, tuple[str, int, dict[str, Any]]] = {}
         start_time = time.time()
         last_broadcast = 0.0
         
@@ -448,8 +454,9 @@ class MarstekUDPClient:
                 # Send broadcast every 2 seconds
                 if current_time - last_broadcast >= 2.0:
                     try:
-                        sock.sendto(probe_bytes, ("255.255.255.255", port))
-                        _LOGGER.debug("Sent discovery probe to 255.255.255.255:%d", port)
+                        for target in broadcast_targets:
+                            sock.sendto(probe_bytes, target)
+                            _LOGGER.debug("Sent discovery probe to %s:%d", target[0], target[1])
                         last_broadcast = current_time
                     except Exception as exc_send:
                         _LOGGER.warning("Failed to send discovery probe: %s", exc_send)
@@ -462,16 +469,25 @@ class MarstekUDPClient:
                         payload = json.loads(text)
                         
                         # Only keep valid responses with "result" field (filter out echoes)
-                        if "result" in payload:
-                            ip_addr = addr[0]
-                            # Deduplicate: keep only first response from each IP
-                            if ip_addr not in responses:
-                                _LOGGER.info("DISCOVERY: Found device at %s:%d - %s", addr[0], addr[1], payload)
-                                responses[ip_addr] = (addr[0], addr[1], payload)
+                        result = payload.get("result", {})
+                        if addr[0] in local_ips:
+                            _LOGGER.debug("Ignoring discovery response from local address %s: %s", addr[0], payload)
+                        elif isinstance(result, dict) and result:
+                            ip_addr = str(result.get("ip") or addr[0])
+                            device_key = str(result.get("ble_mac") or ip_addr)
+                            # Deduplicate: keep only first response from each device identity
+                            if device_key not in responses:
+                                _LOGGER.info(
+                                    "DISCOVERY: Found device at %s:%d - %s",
+                                    ip_addr,
+                                    addr[1],
+                                    payload,
+                                )
+                                responses[device_key] = (ip_addr, addr[1], payload)
                             else:
-                                _LOGGER.debug("Ignoring duplicate response from %s", ip_addr)
+                                _LOGGER.debug("Ignoring duplicate response from %s", device_key)
                         else:
-                            _LOGGER.debug("Ignoring response without 'result' field from %s: %s", addr[0], payload)
+                            _LOGGER.debug("Ignoring response without useful 'result' field from %s: %s", addr[0], payload)
                     except json.JSONDecodeError as je:
                         _LOGGER.debug("Non-JSON discovery response from %s: %s", addr, data[:100])
                     except Exception as e:
@@ -498,6 +514,87 @@ class MarstekUDPClient:
                 sock.close()
             except Exception:
                 pass
+
+    @staticmethod
+    def _get_discovery_targets(
+        port: int,
+        local_ips: set[str] | None = None,
+    ) -> list[tuple[str, int]]:
+        """Return UDP broadcast targets for discovery.
+
+        The official API uses broadcast discovery, but some networks only forward
+        interface-specific broadcasts. We try the global broadcast plus common
+        subnet broadcasts derived from local IPv4 addresses.
+        """
+
+        targets: list[tuple[str, int]] = []
+        seen: set[str] = set()
+
+        def add_target(address: str) -> None:
+            if address and address not in seen:
+                targets.append((address, port))
+                seen.add(address)
+
+        add_target("255.255.255.255")
+
+        if local_ips is None:
+            local_ips = set(MarstekUDPClient._get_local_ipv4_addresses())
+
+        for local_ip in local_ips:
+            for prefix in (24, 16):
+                try:
+                    broadcast = str(ipaddress.ip_network(f"{local_ip}/{prefix}", strict=False).broadcast_address)
+                except ValueError:
+                    continue
+                add_target(broadcast)
+
+        return targets
+
+    @staticmethod
+    def _get_local_ipv4_addresses() -> list[str]:
+        """Best-effort detection of local IPv4 addresses.
+
+        This is intentionally conservative: we only use it to derive broadcast
+        targets for discovery, and we ignore loopback or malformed addresses.
+        """
+
+        addresses: list[str] = []
+        seen: set[str] = set()
+
+        def add_address(address: str | None) -> None:
+            if not address:
+                return
+
+            try:
+                ip_obj = ipaddress.ip_address(address)
+            except ValueError:
+                return
+
+            if ip_obj.version != 4 or ip_obj.is_loopback or ip_obj.is_link_local:
+                return
+
+            address_str = str(ip_obj)
+            if address_str not in seen:
+                addresses.append(address_str)
+                seen.add(address_str)
+
+        try:
+            hostname = socket.gethostname()
+            _host, _aliases, host_ips = socket.gethostbyname_ex(hostname)
+            for ip in host_ips:
+                add_address(ip)
+        except Exception:
+            pass
+
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe_sock:
+                # This does not send packets; it only lets the OS pick a local route.
+                probe_sock.connect(("1.1.1.1", 80))
+                add_address(probe_sock.getsockname()[0])
+        except Exception:
+            pass
+
+        return addresses
 
 
 class _UDPClientProtocol(asyncio.DatagramProtocol):
