@@ -49,3 +49,5 @@ htmlcov/
 # Home Assistant
 .storage/
 secrets.yaml
+
+ha_config
