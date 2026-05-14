@@ -50,7 +50,7 @@ A comprehensive Home Assistant custom integration for the **Marstek Venus E** ba
 	* 9.4. [Enable Debug Logging](#EnableDebugLogging)
 * 10. [API Reference](#APIReference)
 * 11. [Support](#Support)
-* 12. [Contributing](#Contributing)
+* 12. [Contribution](#Contribution)
 * 13. [License](#License)
 * 14. [Disclaimer](#Disclaimer)
 * 15. [Credits](#Credits)
@@ -622,14 +622,117 @@ This integration uses the Marstek Device Local API (UDP JSON-RPC). For complete 
 #- **Discussions**: [GitHub Discussions](https://github.com/yuyuki/marstek-venus-e/discussions)
 - **Home Assistant Community**: [Community Forum](https://community.home-assistant.io/)
 
-##  12. <a name='Contributing'></a>Contributing
+##  12. <a name='Contribution'></a>Contribution
 
-Contributions are welcome! Please:
+Contributions are welcome. This repository is a Home Assistant custom integration, so the best changes are usually small, focused, and easy to validate locally before opening a pull request.
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+### 12.1. Develop Locally
+
+1. Fork or clone the repository.
+2. Open the project in VS Code or your editor of choice.
+3. Make your changes under `custom_components/marstek_venus_e/`.
+4. Keep the code style consistent with the existing files.
+5. Update `README.md`, tests, or docs when behavior changes.
+
+If you are adding or changing an entity, service, or config flow, check the corresponding file in `custom_components/marstek_venus_e/` and keep the names, translations, and platform registration aligned.
+
+### 12.2. Run Tests
+
+This project uses `pytest` for automated tests. The test suite is split into individual scripts under `tests/` so you can run either a single scenario or the whole suite.
+
+Run all tests:
+
+```bash
+pytest tests
+```
+
+Run a specific test script:
+
+```bash
+python tests/test_api_functions.py
+python tests/test_discovery.py
+python tests/test_es_get_status.py --ip 192.168.0.225
+```
+
+If you want a more detailed guide for the available scripts, see [`tests/README_TESTS.md`](tests/README_TESTS.md).
+
+### 12.3. Run In A Container
+
+For real device testing, you can run Home Assistant in a container and mount this integration into the container’s `/config/custom_components` directory.
+
+When you mount a local Home Assistant config directory to `/config`, that mount replaces the `/config` directory from the image. If you want to use a persistent config directory and the local development version of this integration, mount both paths:
+
+1. Your Home Assistant config directory to `/config`.
+2. This repository's integration folder to `/config/custom_components/hacs_marstek_venus_e`.
+
+The official image is:
+
+`homeassistant/home-assistant`
+
+To download it before you run the container, use:
+
+```bash
+docker pull homeassistant/home-assistant:stable
+```
+
+With Podman, the equivalent command is:
+
+```powershell
+podman pull docker.io/homeassistant/home-assistant:stable
+podman build -f docker/Dockerfile -t marstek-ha .
+```
+
+This pulls the `stable` tag from Docker Hub, which is the version most people use for local testing.
+
+#### Generic Docker Example
+
+```bash
+podman run -d \
+  --name homeassistant \
+  --network=host \
+  -e TZ=Europe/Brussels \
+  -v /path/to/your/config:/config \
+  -v /path/to/this/repo/custom_components/hacs_marstek_venus_e:/config/custom_components/hacs_marstek_venus_e \
+  homeassistant/home-assistant:stable
+```
+
+Use `--network=host` when you need the container to discover your local Marstek device by UDP broadcast.
+
+#### Windows + Podman Example
+
+On Windows, Podman usually runs the container inside a Linux VM, so the simplest setup is to use a named volume or a bind mount from a directory that Podman can access.
+
+```powershell
+podman machine init
+podman machine start
+podman run -d `
+  --name homeassistant `
+  --network=host `
+  -e TZ=Europe/Brussels `
+  -v C:\ha-config:/config `
+  -v E:\Projets\hacs_marstek_venus_e\custom_components\hacs_marstek_venus_e:/config/custom_components/hacs_marstek_venus_e `
+  homeassistant/home-assistant:stable
+```
+
+Notes for Windows:
+
+1. Use a path that Podman can share with the VM.
+2. If the bind mount is awkward, copy the integration folder into your Home Assistant config directory instead.
+3. If UDP discovery does not work in container mode, prefer a manual IP setup for the first test pass.
+
+#### Suggested Test Flow
+
+1. Start Home Assistant in the container.
+2. Copy or mount the integration into `custom_components/hacs_marstek_venus_e`.
+3. Add the integration in Home Assistant.
+4. Validate discovery and status sensors.
+5. Use the service calls and manual schedule features to confirm write operations.
+
+Contributions are usually easiest to review when they include:
+
+1. A clear description of the behavior change.
+2. A test case or test script update.
+3. Any README or documentation updates needed for new behavior.
 
 ##  13. <a name='License'></a>License
 
