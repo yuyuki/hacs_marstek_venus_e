@@ -184,8 +184,8 @@ See the **[Manual Mode Automation Guide](MANUAL_MODE_AUTOMATION_GUIDE.md)** for 
 - `sensor.marstek_venus_e_grid_power` - Grid import/export power (W)
 - `sensor.marstek_venus_e_offgrid_power` - Off-grid power (W)
 - `sensor.marstek_venus_e_total_pv_energy` - Total PV energy generated (kWh)
-- `sensor.marstek_venus_e_total_grid_export_energy` - Total energy exported to grid (kWh)
-- `sensor.marstek_venus_e_total_grid_import_energy` - Total energy imported from grid (kWh)
+- `sensor.marstek_venus_e_total_grid_export_energy` - Total energy exported to grid (Wh)
+- `sensor.marstek_venus_e_total_grid_import_energy` - Total energy imported from grid (Wh)
 - `sensor.marstek_venus_e_total_load_energy` - Total load consumption (kWh)
 
 ####  4.1.4. <a name='CTMeterifinstalled'></a>CT Meter (if installed)
