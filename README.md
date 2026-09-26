@@ -9,6 +9,8 @@
 
 A comprehensive Home Assistant custom integration for the **Marstek Venus E** battery energy storage system. This integration provides full local control and monitoring via the device's UDP JSON-RPC API.
 
+The implementation is based on **Marstek Device Open API revision 3.1**. See the [API 3.1 reference](doc/MarstekDeviceOpenApi%203.1.pdf) for the supported commands, response fields, units, and device-specific limitations.
+
 <!-- vscode-markdown-toc -->
 * 1. [Features](#Features)
 * 2. [Installation](#Installation)
@@ -622,7 +624,7 @@ Then check logs at **Settings** → **System** → **Logs**
 
 ##  10. <a name='APIReference'></a>API Reference
 
-This integration uses the Marstek Device Local API (UDP JSON-RPC). For complete API documentation, refer to the local API reference document in [`doc/MarstekDeviceOpenApi 2.0.pdf`](doc/MarstekDeviceOpenApi%202.0.pdf).
+This integration is based on [Marstek Device Open API revision 3.1](doc/MarstekDeviceOpenApi%203.1.pdf) and communicates locally through UDP JSON-RPC. The [revision 2.0 document](doc/MarstekDeviceOpenApi%202.0.pdf) is retained for historical reference; use revision 3.1 when implementing or checking current behavior.
 
 ##  11. <a name='Support'></a>Support
 
