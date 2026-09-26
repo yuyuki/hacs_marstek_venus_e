@@ -15,10 +15,6 @@
       "name": "Set Operating Mode",
       "description": "Change the operating mode of the Marstek Venus E system"
     },
-    "set_manual_schedule": {
-      "name": "Set Manual Schedule",
-      "description": "Configure a manual charging/discharging schedule"
-    },
     "set_passive_mode": {
       "name": "Set Passive Mode",
       "description": "Set passive mode with a power target"

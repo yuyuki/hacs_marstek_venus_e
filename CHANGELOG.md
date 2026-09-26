@@ -2,6 +2,11 @@
 
 All notable changes to the Marstek Venus E Home Assistant Integration will be documented in this file.
 
+## Unreleased
+
+- Remove the obsolete `set_manual_schedule` Home Assistant action and API 2.0 PDFs. Manual slots remain available through integration options and `change_operating_mode`, both using API 3.1 `ES.SetMode/manual_cfg`.
+- Remove test references to undocumented `ES.GetSchedule`, `ES.SetSchedule`, and `ES.SetPassiveMode` commands.
+
 ## [2.3.0] - 2026-09-26
 
 - Use the documented API 3.1 `ES.SetMode/manual_cfg` call for manual slots.

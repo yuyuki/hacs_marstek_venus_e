@@ -173,9 +173,8 @@ python tests/test_es_get_mode.py --help
 | `ES.SetMode` | - | Change operating mode | Not tested (write operation) |
 | `Bat.GetStatus` | - | Battery detailed status | Available in client |
 | `Wifi.GetStatus` | - | WiFi connection status | Available in client |
-| `ES.SetSchedule` | - | Configure manual schedule | Available in client |
-| `ES.GetSchedule` | - | Get schedule configuration | Available in client |
-| `ES.SetPassiveMode` | - | Set passive mode | Available in client |
+| `ES.SetMode` with `manual_cfg` | test_es_set_mode.py | Configure a manual slot | API 3.1 |
+| `ES.SetMode` with `passive_cfg` | test_es_set_mode.py | Set passive mode | API 3.1 |
 
 ## Running Discovery & Connection Tests
 
@@ -285,7 +284,7 @@ This is normal if:
 The UDP request takes too long to complete. This can happen if:
 - The device is offline or unreachable
 - Network latency is very high
-- The device firmware doesn't respond to `get_realtime_data` RPC calls
+- The device firmware doesn't respond to `ES.GetStatus` requests
 - Firewall is blocking UDP replies
 
 **Solutions:**
@@ -297,7 +296,7 @@ The UDP request takes too long to complete. This can happen if:
 #### Device found but connection fails
 
 The device was discovered but doesn't respond to data requests. This may indicate:
-- Device firmware doesn't support the `get_realtime_data` method
+- Device firmware doesn't support the `ES.GetStatus` method
 - Device is in a state where it can't respond to requests
 
 **Next steps:**
@@ -316,7 +315,7 @@ Once you've verified the test passes:
    logger:
      default: info
      logs:
-       custom_components.marstek_venus_e: debug
+       custom_components.hacs_marstek_venus_e: debug
    ```
 
 ### Debug Output

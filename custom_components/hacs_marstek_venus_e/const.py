@@ -17,13 +17,6 @@ MODE_PASSIVE: Final = "Passive"
 VALID_MODES: Final = [MODE_AUTO, MODE_AI, MODE_MANUAL, MODE_PASSIVE]
 
 # API Methods
-API_GET_REALTIME_DATA: Final = "get_realtime_data"
-API_GET_BATTERY_INFO: Final = "get_battery_info"
-API_SET_MODE: Final = "set_mode"
-API_SET_MANUAL_SCHEDULE: Final = "set_manual_schedule"
-API_SET_PASSIVE_MODE: Final = "set_passive_mode"
-API_GET_SCHEDULE: Final = "get_schedule"
-
 # Battery Attributes
 ATTR_BATTERY_SOC: Final = "battery_soc"
 ATTR_BATTERY_TEMPERATURE: Final = "battery_temperature"

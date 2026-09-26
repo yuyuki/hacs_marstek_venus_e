@@ -11,9 +11,6 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .const import (
     DOMAIN,
-    API_SET_MODE,
-    API_SET_MANUAL_SCHEDULE,
-    API_SET_PASSIVE_MODE,
     VALID_MODES,
 )
 
@@ -76,19 +73,6 @@ async def _execute_targeted(hass: HomeAssistant, call: ServiceCall, operation) -
 SERVICE_SET_MODE_SCHEMA = vol.Schema(
     {
         vol.Required("mode"): vol.In(VALID_MODES),
-        **TARGET_FIELDS,
-    }
-)
-
-SERVICE_SET_MANUAL_SCHEDULE_SCHEMA = vol.Schema(
-    {
-        vol.Required("time_num"): vol.All(vol.Coerce(int), vol.Range(min=0, max=9)),
-        vol.Required("start_time"): cv.time,
-        vol.Required("end_time"): cv.time,  # Note: end_time must be > start_time (validated by device)
-        vol.Required("week_set"): vol.All(vol.Coerce(int), vol.Range(min=1, max=127)),
-        vol.Required("mode"): vol.In(["Charging", "Discharging"]),  # Charging or Discharging
-        vol.Required("power"): vol.All(vol.Coerce(int), vol.Range(min=0, max=2500)),
-        vol.Optional("enable", default=True): cv.boolean,
         **TARGET_FIELDS,
     }
 )
@@ -213,35 +197,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         
         return await _execute_targeted(hass, call, lambda coordinator: coordinator.set_mode(mode))
 
-    async def set_manual_schedule_handler(call: ServiceCall) -> None:
-        """Handle set_manual_schedule service call.
-        
-        Args:
-            call: Service call object
-        """
-        time_num = call.data.get("time_num")
-        start_time = call.data.get("start_time").strftime("%H:%M")
-        end_time = call.data.get("end_time").strftime("%H:%M")
-        week_set = call.data.get("week_set")
-        mode = call.data.get("mode")
-        power_magnitude = call.data.get("power")
-        enable = call.data.get("enable", True)
-        
-        # Convert power based on mode: Charging = negative, Discharging = positive
-        power = -power_magnitude if mode == "Charging" else power_magnitude
-        
-        async def apply(coordinator):
-            await coordinator.set_manual_schedule(
-                    time_num=time_num,
-                    start_time=start_time,
-                    end_time=end_time,
-                    week_set=week_set,
-                    power=power,
-                    enable=enable,
-            )
-
-        await _execute_targeted(hass, call, apply)
-
     async def set_passive_mode_handler(call: ServiceCall) -> dict | None:
         """Handle set_passive_mode service call.
         
@@ -263,13 +218,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         set_mode_handler,
         schema=SERVICE_SET_MODE_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
-    )
-
-    hass.services.async_register(
-        DOMAIN,
-        "set_manual_schedule",
-        set_manual_schedule_handler,
-        schema=SERVICE_SET_MANUAL_SCHEDULE_SCHEMA,
     )
 
     hass.services.async_register(

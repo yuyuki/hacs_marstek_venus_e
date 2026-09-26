@@ -2,7 +2,7 @@
 
 This repository is a Home Assistant custom integration in
 `custom_components/hacs_marstek_venus_e`. The protocol reference for new work is
-`doc/MarstekDeviceOpenApi 3.1.pdf` when present. Revision 2.0 is historical.
+`doc/MarstekDeviceOpenApi 3.1.pdf`.
 Check the supported devices and firmware notes in the reference before exposing
 a command or sensor.
 

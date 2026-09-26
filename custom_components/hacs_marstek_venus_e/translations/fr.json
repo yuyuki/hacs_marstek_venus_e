@@ -133,10 +133,6 @@
       "name": "Définir le mode de fonctionnement",
       "description": "Changer le mode de fonctionnement du système Marstek Venus E"
     },
-    "set_manual_schedule": {
-      "name": "Définir un horaire manuel",
-      "description": "Configurer un horaire de charge/décharge manuel"
-    },
     "set_passive_mode": {
       "name": "Définir le mode passif",
       "description": "Définir le mode passif avec une cible de puissance spécifique"

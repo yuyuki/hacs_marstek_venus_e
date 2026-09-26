@@ -31,20 +31,19 @@ The implementation is based on **Marstek Device Open API revision 3.1**. See the
 	* 4.2. [Binary Sensors](#BinarySensors)
 	* 4.3. [Select Entities](#SelectEntities)
 * 5. [Services](#Services)
-	* 5.1. [`marstek_venus_e.set_mode`](#marstek_venus_e.set_mode)
-	* 5.2. [`marstek_venus_e.set_manual_schedule`](#marstek_venus_e.set_manual_schedule)
-	* 5.3. [`marstek_venus_e.set_passive_mode`](#marstek_venus_e.set_passive_mode)
+	* 5.1. [`hacs_marstek_venus_e.set_mode`](#marstek_venus_e.set_mode)
+	* 5.2. [`hacs_marstek_venus_e.set_passive_mode`](#marstek_venus_e.set_passive_mode)
+	* 5.3. [`hacs_marstek_venus_e.change_operating_mode`](#change_operating_mode)
 * 6. [Lovelace Dashboard Examples](#LovelaceDashboardExamples)
 	* 6.1. [Battery Status Card](#BatteryStatusCard)
 	* 6.2. [Energy Flow Card](#EnergyFlowCard)
 	* 6.3. [Complete Dashboard](#CompleteDashboard)
 * 7. [Energy Dashboard Configuration](#EnergyDashboardConfiguration)
 * 8. [Automation Examples](#AutomationExamples)
-	* 8.1. [Auto-Configure All 10 Schedules When Switching to Manual Mode](#Auto-ConfigureAll10SchedulesWhenSwitchingtoManualMode)
-	* 8.2. [Charge Battery During Cheap Hours (Single Slot)](#ChargeBatteryDuringCheapHoursSingleSlot)
-	* 8.3. [Switch to Auto During Day](#SwitchtoAutoDuringDay)
-	* 8.4. [Low Battery Alert](#LowBatteryAlert)
-	* 8.5. [Maximize Self-Consumption](#MaximizeSelf-Consumption)
+	* 8.1. [Configure Manual Mode](#Auto-ConfigureAll10SchedulesWhenSwitchingtoManualMode)
+	* 8.2. [Switch to Auto During Day](#SwitchtoAutoDuringDay)
+	* 8.3. [Low Battery Alert](#LowBatteryAlert)
+	* 8.4. [Maximize Self-Consumption](#MaximizeSelf-Consumption)
 * 9. [Troubleshooting](#Troubleshooting)
 	* 9.1. [Integration Not Appearing](#IntegrationNotAppearing)
 	* 9.2. [Cannot Connect to Device](#CannotConnecttoDevice)
@@ -91,7 +90,7 @@ The implementation is based on **Marstek Device Open API revision 3.1**. See the
 - Service calls for automation
 - Select entity for easy mode switching
 - Options flow for schedule configuration
-- 5-minute polling interval (configurable via options)
+- Polling interval configurable via options
 - Non-blocking async implementation
 - Comprehensive device information
 - Multi-language support (English, French)
@@ -111,7 +110,7 @@ The implementation is based on **Marstek Device Open API revision 3.1**. See the
 
 ###  2.2. <a name='ManualInstallation'></a>Manual Installation
 
-1. Copy the `custom_components/marstek_venus_e` folder to your Home Assistant's `custom_components` directory
+1. Copy the `custom_components/hacs_marstek_venus_e` folder to your Home Assistant's `custom_components` directory
 2. Restart Home Assistant
 
 ##  3. <a name='Configuration'></a>Configuration
@@ -148,23 +147,9 @@ After adding the integration, you can configure charging/discharging schedules i
    - **Enable**: Toggle to activate
 6. Click Submit
 
-####  3.2.2. <a name='Method2:ThroughAutomationsRecommendedforMultipleSlots'></a>Method 2: Through Automations (Recommended for Multiple Slots)
+####  3.2.2. <a name='Method2:ThroughAutomationsRecommendedforMultipleSlots'></a>Method 2: Through Automations
 
-Configure all 10 schedule slots automatically when you switch to Manual mode using Home Assistant automations. This is the easiest way to set up complex schedules!
-
-**Quick Start:**
-1. Copy the example automation from `example_automation.yaml` in this repository
-2. Paste it into your Home Assistant automations
-3. Adjust times, power levels, and days to match your needs
-4. Save and test by switching to Manual mode!
-
-**Benefits:**
-- Configure all 10 slots in one action
-- Different schedules for weekdays vs weekends
-- Dynamic schedules based on battery level, weather, or electricity prices
-- Seasonal adjustments (winter vs summer patterns)
-
-See the **[Manual Mode Automation Guide](MANUAL_MODE_AUTOMATION_GUIDE.md)** for detailed examples and best practices.
+Use `hacs_marstek_venus_e.change_operating_mode` to configure up to 10 slots in one action. See [the action example](#change_operating_mode). This action disables any slots you do not enable explicitly.
 
 ##  4. <a name='Entities'></a>Entities
 
@@ -217,13 +202,15 @@ See the **[Manual Mode Automation Guide](MANUAL_MODE_AUTOMATION_GUIDE.md)** for 
 
 Manual time slots are written with `ES.SetMode` and `manual_cfg`. The battery does not expose a documented schedule read endpoint. Existing schedules stay untouched during setup; use the clear schedules button or action explicitly.
 
+The former Home Assistant action `hacs_marstek_venus_e.set_manual_schedule` has been removed. Update automations to use `change_operating_mode` for a complete schedule or the integration options to change one slot. `change_operating_mode` disables any slots not enabled in its call.
+
 The battery can time out intermittently. Each UDP command has two attempts (30 seconds each), and commands to the same battery run sequentially. Write actions require a positive `set_result` acknowledgement. When controlling multiple batteries, select a Home Assistant device, entity, or area as a target; an omitted target retains the previous all-battery behavior. `set_mode` and `set_passive_mode` support an optional per-battery response.
 
 **Energy statistics upgrade:** API 3.1 reports `total_pv_energy` in 0.01 kWh. The sensor now converts it to Wh (raw value × 10). If Home Assistant recorded values from an older version, review and correct historical PV statistics in Developer Tools → Statistics after upgrading; the old recorded values used a different scale.
 
 ##  5. <a name='Services'></a>Services
 
-###  5.1. <a name='marstek_venus_e.set_mode'></a>`marstek_venus_e.set_mode`
+###  5.1. <a name='marstek_venus_e.set_mode'></a>`hacs_marstek_venus_e.set_mode`
 
 Set the operating mode of your system.
 
@@ -239,41 +226,7 @@ data:
   mode: "Auto"
 ```
 
-###  5.2. <a name='marstek_venus_e.set_manual_schedule'></a>`marstek_venus_e.set_manual_schedule`
-
-Configure a manual charging/discharging schedule.
-
-```yaml
-service: hacs_marstek_venus_e.set_manual_schedule
-data:
-  time_num: 0  # Time slot 0-9 (10 slots available!)
-  start_time: "09:00"
-  end_time: "17:00"  # MUST be greater than start_time
-  week_set: 127  # All days (byte-based: 1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun)
-  mode: "Charging"  # "Charging" or "Discharging"
-  power: 500  # 100-2500W magnitude (always positive)
-  enable: true
-```
-
-**Important Constraints:**
-- `end_time` must be greater than `start_time`
-- `mode` must be "Charging" (negative power) or "Discharging" (positive power)
-- `power` magnitude must be between 100 and 2500 watts (always positive)
-- `week_set` uses byte-based bitmask
-
-**Week Set Bitmask:**
-- Monday: 1
-- Tuesday: 2
-- Wednesday: 4
-- Thursday: 8
-- Friday: 16
-- Saturday: 32
-- Sunday: 64
-- All days: 127 (sum of all)
-- Weekdays only: 31
-- Weekend only: 96
-
-###  5.3. <a name='marstek_venus_e.set_passive_mode'></a>`marstek_venus_e.set_passive_mode`
+###  5.2. <a name='marstek_venus_e.set_passive_mode'></a>`hacs_marstek_venus_e.set_passive_mode`
 
 Set passive mode with a power target.
 
@@ -283,6 +236,24 @@ data:
   power: 2000  # Target power in watts
   cd_time: 3600  # Countdown in seconds (0 = indefinite)
 ```
+
+###  5.3. <a name='change_operating_mode'></a>`hacs_marstek_venus_e.change_operating_mode`
+
+Configure Manual mode and its slots through a Home Assistant action. The integration sends each slot using the API 3.1 `ES.SetMode` command with `manual_cfg`. This action disables slots not marked as enabled.
+
+```yaml
+service: hacs_marstek_venus_e.change_operating_mode
+data:
+  mode: Manual
+  slot_0_enable: true
+  slot_0_start_time: "01:00"
+  slot_0_end_time: "06:00"
+  slot_0_mode: Charging
+  slot_0_power: 500
+  slot_0_days: 127
+```
+
+The day mask uses Monday=1 through Sunday=64; 127 selects every day. Slots range from 0 to 9. You can also configure one slot in the integration options without changing the other slots.
 
 ##  6. <a name='LovelaceDashboardExamples'></a>Lovelace Dashboard Examples
 
@@ -460,84 +431,11 @@ Add your Marstek Venus E to Home Assistant's Energy Dashboard:
 
 ##  8. <a name='AutomationExamples'></a>Automation Examples
 
-###  8.1. <a name='Auto-ConfigureAll10SchedulesWhenSwitchingtoManualMode'></a>Auto-Configure All 10 Schedules When Switching to Manual Mode
+###  8.1. <a name='Auto-ConfigureAll10SchedulesWhenSwitchingtoManualMode'></a>Configure Manual Mode
 
-The best way to use Manual mode is to automatically configure all 10 schedule slots when you switch to it:
+Use the `hacs_marstek_venus_e.change_operating_mode` action shown above to configure enabled slots 0–9 together. Unspecified slots are disabled by that action; use the integration options to edit a single slot while keeping the others.
 
-```yaml
-automation:
-  - alias: "Marstek - Auto-Configure on Manual Mode"
-    trigger:
-      - platform: state
-        entity_id: select.operating_mode
-        to: "Manual"
-    action:
-      # Slot 0: Night charging
-      - service: hacs_marstek_venus_e.set_manual_schedule
-        data:
-          time_num: 0
-          start_time: "01:00"
-          end_time: "06:00"
-          week_set: 127  # All days
-          mode: "Charging"
-          power: 2500  # Charge at 2500W (maximum)
-          enable: true
-      
-      # Slot 1: Morning peak discharge (weekdays)
-      - service: hacs_marstek_venus_e.set_manual_schedule
-        data:
-          time_num: 1
-          start_time: "07:00"
-          end_time: "09:00"
-          week_set: 31  # Weekdays only
-          mode: "Discharging"
-          power: 700  # Discharge at 700W
-          enable: true
-      
-      # Slot 2: Evening peak discharge
-      - service: hacs_marstek_venus_e.set_manual_schedule
-        data:
-          time_num: 2
-          start_time: "18:00"
-          end_time: "22:00"
-          week_set: 127  # All days
-          mode: "Discharging"
-          power: 750  # Discharge at 750W
-          enable: true
-      
-      # ... configure remaining slots 3-9 as needed
-```
-
-**📖 See the [Manual Mode Automation Guide](MANUAL_MODE_AUTOMATION_GUIDE.md) for:**
-- Complete 10-slot configuration examples
-- Seasonal schedules (winter vs summer)
-- Dynamic schedules based on battery level
-- Price-based charging strategies
-- Weekend vs weekday patterns
-
-###  8.2. <a name='ChargeBatteryDuringCheapHoursSingleSlot'></a>Charge Battery During Cheap Hours (Single Slot)
-
-```yaml
-automation:
-  - alias: "Charge Battery at Night"
-    trigger:
-      - platform: time
-        at: "23:00:00"
-    action:
-      - service: hacs_marstek_venus_e.set_manual_schedule
-        data:
-          time_num: 0
-          start_time: "01:00"
-          end_time: "07:00"  # Must be > start_time
-          week_set: 127  # Every day
-          power: 2500  # Maximum (2500W)
-          enable: true
-      - service: hacs_marstek_venus_e.set_mode
-        data:
-          mode: "Manual"
-```
-
-###  8.3. <a name='SwitchtoAutoDuringDay'></a>Switch to Auto During Day
+###  8.2. <a name='SwitchtoAutoDuringDay'></a>Switch to Auto During Day
 
 ```yaml
 automation:
@@ -551,7 +449,7 @@ automation:
           mode: "Auto"
 ```
 
-###  8.4. <a name='LowBatteryAlert'></a>Low Battery Alert
+###  8.3. <a name='LowBatteryAlert'></a>Low Battery Alert
 
 ```yaml
 automation:
@@ -567,7 +465,7 @@ automation:
           message: "Marstek battery is at {{ states('sensor.marstek_venus_e_battery_state_of_charge') }}%"
 ```
 
-###  8.5. <a name='MaximizeSelf-Consumption'></a>Maximize Self-Consumption
+###  8.4. <a name='MaximizeSelf-Consumption'></a>Maximize Self-Consumption
 
 ```yaml
 automation:
@@ -592,7 +490,7 @@ automation:
 ###  9.1. <a name='IntegrationNotAppearing'></a>Integration Not Appearing
 
 1. Ensure you've restarted Home Assistant after installation
-2. Check `custom_components/marstek_venus_e/manifest.json` exists
+2. Check `custom_components/hacs_marstek_venus_e/manifest.json` exists
 3. Review Home Assistant logs for errors
 
 ###  9.2. <a name='CannotConnecttoDevice'></a>Cannot Connect to Device
@@ -617,14 +515,14 @@ Add to `configuration.yaml`:
 logger:
   default: info
   logs:
-    custom_components.marstek_venus_e: debug
+    custom_components.hacs_marstek_venus_e: debug
 ```
 
 Then check logs at **Settings** → **System** → **Logs**
 
 ##  10. <a name='APIReference'></a>API Reference
 
-This integration is based on [Marstek Device Open API revision 3.1](doc/MarstekDeviceOpenApi%203.1.pdf) and communicates locally through UDP JSON-RPC. The [revision 2.0 document](doc/MarstekDeviceOpenApi%202.0.pdf) is retained for historical reference; use revision 3.1 when implementing or checking current behavior.
+This integration is based on [Marstek Device Open API revision 3.1](doc/MarstekDeviceOpenApi%203.1.pdf) and communicates locally through UDP JSON-RPC. Use this revision when implementing or checking device commands. Home Assistant action names are integration interfaces, not device RPC methods.
 
 ##  11. <a name='Support'></a>Support
 
@@ -640,11 +538,11 @@ Contributions are welcome. This repository is a Home Assistant custom integratio
 
 1. Fork or clone the repository.
 2. Open the project in VS Code or your editor of choice.
-3. Make your changes under `custom_components/marstek_venus_e/`.
+3. Make your changes under `custom_components/hacs_marstek_venus_e/`.
 4. Keep the code style consistent with the existing files.
 5. Update `README.md`, tests, or docs when behavior changes.
 
-If you are adding or changing an entity, service, or config flow, check the corresponding file in `custom_components/marstek_venus_e/` and keep the names, translations, and platform registration aligned.
+If you are adding or changing an entity, service, or config flow, check the corresponding file in `custom_components/hacs_marstek_venus_e/` and keep the names, translations, and platform registration aligned.
 
 ### 12.2. Run Tests
 
