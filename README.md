@@ -183,10 +183,10 @@ See the **[Manual Mode Automation Guide](MANUAL_MODE_AUTOMATION_GUIDE.md)** for 
 ####  4.1.3. <a name='GridEnergy'></a>Grid & Energy
 - `sensor.marstek_venus_e_grid_power` - Grid import/export power (W)
 - `sensor.marstek_venus_e_offgrid_power` - Off-grid power (W)
-- `sensor.marstek_venus_e_total_pv_energy` - Total PV energy generated (kWh)
+- `sensor.marstek_venus_e_total_pv_energy` - Total PV energy generated (Wh; API 3.1 counter multiplied by 10)
 - `sensor.marstek_venus_e_total_grid_export_energy` - Total energy exported to grid (Wh)
 - `sensor.marstek_venus_e_total_grid_import_energy` - Total energy imported from grid (Wh)
-- `sensor.marstek_venus_e_total_load_energy` - Total load consumption (kWh)
+- `sensor.marstek_venus_e_total_load_energy` - Total load consumption (Wh)
 
 ####  4.1.4. <a name='CTMeterifinstalled'></a>CT Meter (if installed)
 - `sensor.marstek_venus_e_phase_a_power` - Phase A power (W)
@@ -211,6 +211,14 @@ See the **[Manual Mode Automation Guide](MANUAL_MODE_AUTOMATION_GUIDE.md)** for 
   - **Manual**: Time-based schedules (configure via integration options)
   - **Passive**: Fixed power target mode
 
+## API 3.1 compatibility
+
+Manual time slots are written with `ES.SetMode` and `manual_cfg`. The battery does not expose a documented schedule read endpoint. Existing schedules stay untouched during setup; use the clear schedules button or action explicitly.
+
+The battery can time out intermittently. Each UDP command has two attempts (30 seconds each), and commands to the same battery run sequentially. Write actions require a positive `set_result` acknowledgement. When controlling multiple batteries, select a Home Assistant device, entity, or area as a target; an omitted target retains the previous all-battery behavior. `set_mode` and `set_passive_mode` support an optional per-battery response.
+
+**Energy statistics upgrade:** API 3.1 reports `total_pv_energy` in 0.01 kWh. The sensor now converts it to Wh (raw value × 10). If Home Assistant recorded values from an older version, review and correct historical PV statistics in Developer Tools → Statistics after upgrading; the old recorded values used a different scale.
+
 ##  5. <a name='Services'></a>Services
 
 ###  5.1. <a name='marstek_venus_e.set_mode'></a>`marstek_venus_e.set_mode`
@@ -224,7 +232,7 @@ Set the operating mode of your system.
 - `Passive` - Follow a specific power target
 
 ```yaml
-service: marstek_venus_e.set_mode
+service: hacs_marstek_venus_e.set_mode
 data:
   mode: "Auto"
 ```
@@ -234,7 +242,7 @@ data:
 Configure a manual charging/discharging schedule.
 
 ```yaml
-service: marstek_venus_e.set_manual_schedule
+service: hacs_marstek_venus_e.set_manual_schedule
 data:
   time_num: 0  # Time slot 0-9 (10 slots available!)
   start_time: "09:00"
@@ -268,7 +276,7 @@ data:
 Set passive mode with a power target.
 
 ```yaml
-service: marstek_venus_e.set_passive_mode
+service: hacs_marstek_venus_e.set_passive_mode
 data:
   power: 2000  # Target power in watts
   cd_time: 3600  # Countdown in seconds (0 = indefinite)
@@ -410,7 +418,7 @@ cards:
         icon: mdi:autorenew
         tap_action:
           action: call-service
-          service: marstek_venus_e.set_mode
+          service: hacs_marstek_venus_e.set_mode
           data:
             mode: "Auto"
       - type: button
@@ -418,7 +426,7 @@ cards:
         icon: mdi:brain
         tap_action:
           action: call-service
-          service: marstek_venus_e.set_mode
+          service: hacs_marstek_venus_e.set_mode
           data:
             mode: "AI"
       - type: button
@@ -426,7 +434,7 @@ cards:
         icon: mdi:clock-outline
         tap_action:
           action: call-service
-          service: marstek_venus_e.set_mode
+          service: hacs_marstek_venus_e.set_mode
           data:
             mode: "Manual"
 ```
@@ -463,7 +471,7 @@ automation:
         to: "Manual"
     action:
       # Slot 0: Night charging
-      - service: marstek_venus_e.set_manual_schedule
+      - service: hacs_marstek_venus_e.set_manual_schedule
         data:
           time_num: 0
           start_time: "01:00"
@@ -474,7 +482,7 @@ automation:
           enable: true
       
       # Slot 1: Morning peak discharge (weekdays)
-      - service: marstek_venus_e.set_manual_schedule
+      - service: hacs_marstek_venus_e.set_manual_schedule
         data:
           time_num: 1
           start_time: "07:00"
@@ -485,7 +493,7 @@ automation:
           enable: true
       
       # Slot 2: Evening peak discharge
-      - service: marstek_venus_e.set_manual_schedule
+      - service: hacs_marstek_venus_e.set_manual_schedule
         data:
           time_num: 2
           start_time: "18:00"
@@ -514,7 +522,7 @@ automation:
       - platform: time
         at: "23:00:00"
     action:
-      - service: marstek_venus_e.set_manual_schedule
+      - service: hacs_marstek_venus_e.set_manual_schedule
         data:
           time_num: 0
           start_time: "01:00"
@@ -522,7 +530,7 @@ automation:
           week_set: 127  # Every day
           power: 2500  # Maximum (2500W)
           enable: true
-      - service: marstek_venus_e.set_mode
+      - service: hacs_marstek_venus_e.set_mode
         data:
           mode: "Manual"
 ```
@@ -536,7 +544,7 @@ automation:
       - platform: time
         at: "07:00:00"
     action:
-      - service: marstek_venus_e.set_mode
+      - service: hacs_marstek_venus_e.set_mode
         data:
           mode: "Auto"
 ```
@@ -571,7 +579,7 @@ automation:
         entity_id: sensor.marstek_venus_e_battery_state_of_charge
         below: 95
     action:
-      - service: marstek_venus_e.set_passive_mode
+      - service: hacs_marstek_venus_e.set_passive_mode
         data:
           power: -2000  # Charge battery
           cd_time: 0  # Until solar drops

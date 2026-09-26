@@ -6,8 +6,7 @@ DOMAIN: Final = "hacs_marstek_venus_e"
 # Device Configuration
 DEFAULT_PORT: Final = 30000
 DEFAULT_SCAN_INTERVAL: Final = 60  # seconds (1 minute)
-DEFAULT_TIMEOUT: Final = 30.0  # seconds - UDP request timeout (API requires 30s)
-MIN_TIME_BETWEEN_REQUESTS: Final = 30.0  # seconds - minimum time between UDP requests per API spec
+DEFAULT_TIMEOUT: Final = 30.0  # seconds per attempt; some devices respond slowly
 
 # Modes
 MODE_AUTO: Final = "Auto"
@@ -156,11 +155,12 @@ SENSORS_GRID: Final = {
 SENSORS_ENERGY: Final = {
     "total_pv_energy": {
         "name": "Total PV Energy",
-        "unit": "Wh",  # Device returns Wh, not kWh
+        "unit": "Wh",  # API 3.1 reports this counter in 0.01 kWh (10 Wh)
         "icon": "mdi:solar-power-box",
         "device_class": "energy",
         "state_class": "total_increasing",
         "attr": "total_pv_energy",  # Direct field from ES.GetStatus
+        "scale": 10,
     },
     "total_grid_export_energy": {
         "name": "Total Grid Export Energy",

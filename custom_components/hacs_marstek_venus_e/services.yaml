@@ -1,6 +1,9 @@
 set_mode:
   name: Set Operating Mode
   description: Change the operating mode of the Marstek Venus E system
+  target:
+    device:
+      integration: hacs_marstek_venus_e
   fields:
     mode:
       name: Mode
@@ -17,6 +20,9 @@ set_mode:
 set_manual_schedule:
   name: Set Manual Schedule
   description: Configure a manual charging/discharging schedule
+  target:
+    device:
+      integration: hacs_marstek_venus_e
   fields:
     time_num:
       name: Time Slot Number
@@ -85,6 +91,9 @@ set_manual_schedule:
 set_passive_mode:
   name: Set Passive Mode
   description: Set passive mode with a specific power target
+  target:
+    device:
+      integration: hacs_marstek_venus_e
   fields:
     power:
       name: Target Power
@@ -92,8 +101,8 @@ set_passive_mode:
       required: true
       selector:
         number:
-          min: -10000
-          max: 10000
+          min: -2500
+          max: 2500
           step: 100
           unit_of_measurement: "W"
           mode: box
@@ -113,10 +122,16 @@ set_passive_mode:
 clear_all_schedules:
   name: Clear All Manual Schedules
   description: Disable all manual charging/discharging schedules (slots 0-9)
+  target:
+    device:
+      integration: hacs_marstek_venus_e
 
 change_operating_mode:
   name: Change Operating Mode
   description: Change the operating mode with optional manual schedule configuration (when Manual mode is selected)
+  target:
+    device:
+      integration: hacs_marstek_venus_e
   fields:
     mode:
       name: Mode
@@ -410,13 +425,13 @@ change_operating_mode:
         time:
     slot_5_power:
       name: Slot 5 - Power (W)
-      description: Power for slot 5 (100-800W)
+      description: Power for slot 5 (100-2500W)
       required: false
       default: 100
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box
@@ -462,13 +477,13 @@ change_operating_mode:
         time:
     slot_6_power:
       name: Slot 6 - Power (W)
-      description: Power for slot 6 (100-800W)
+      description: Power for slot 6 (100-2500W)
       required: false
       default: 100
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box
@@ -514,13 +529,13 @@ change_operating_mode:
         time:
     slot_7_power:
       name: Slot 7 - Power (W)
-      description: Power for slot 7 (100-800W)
+      description: Power for slot 7 (100-2500W)
       required: false
       default: 100
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box
@@ -566,13 +581,13 @@ change_operating_mode:
         time:
     slot_8_power:
       name: Slot 8 - Power (W)
-      description: Power for slot 8 (100-800W)
+      description: Power for slot 8 (100-2500W)
       required: false
       default: 100
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box
@@ -618,13 +633,13 @@ change_operating_mode:
         time:
     slot_9_power:
       name: Slot 9 - Power (W)
-      description: Power for slot 9 (100-800W)
+      description: Power for slot 9 (100-2500W)
       required: false
       default: 100
       selector:
         number:
           min: 100
-          max: 800
+          max: 2500
           step: 10
           unit_of_measurement: "W"
           mode: box
@@ -650,25 +665,12 @@ change_operating_mode:
           step: 1
           mode: box
 
-set_dod:
-  name: Set Battery Depth of Discharge
-  description: Configure the battery depth of discharge (DOD) value
-  fields:
-    value:
-      name: DOD Value
-      description: Depth of discharge percentage (30-88)
-      required: true
-      selector:
-        number:
-          min: 30
-          max: 88
-          step: 1
-          mode: slider
-          unit_of_measurement: "%"
-
 set_ble_adv:
   name: Control Bluetooth Advertising
   description: Enable or disable Bluetooth advertising
+  target:
+    device:
+      integration: hacs_marstek_venus_e
   fields:
     enable:
       name: Enable
@@ -680,6 +682,9 @@ set_ble_adv:
 set_led_ctrl:
   name: Control LED
   description: Turn the device LED on or off
+  target:
+    device:
+      integration: hacs_marstek_venus_e
   fields:
     enabled:
       name: Enabled

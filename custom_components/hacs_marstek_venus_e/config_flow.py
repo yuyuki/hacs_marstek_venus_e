@@ -162,8 +162,7 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain="hacs_marstek_venus_e"
                 self.context["port"] = port
                 self.context["ble_mac"] = ble_mac
                 
-                # Ask if user wants to clear schedules
-                return await self.async_step_clear_schedules()
+                return self._create_device_entry()
         
         # Build device list for selection
         device_options: dict[str, str] = {}
@@ -232,8 +231,7 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain="hacs_marstek_venus_e"
                 self.context["port"] = port
                 self.context["ble_mac"] = ble_mac
                 
-                # Ask if user wants to clear schedules
-                return await self.async_step_clear_schedules()
+                return self._create_device_entry()
 
         schema = vol.Schema(
             {
@@ -249,65 +247,15 @@ class MarstekConfigFlow(config_entries.ConfigFlow, domain="hacs_marstek_venus_e"
             errors=errors,
         )
 
-    async def async_step_clear_schedules(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Ask user if they want to clear all manual schedules.
-        
-        Args:
-            user_input: Input from the user
-            
-        Returns:
-            Config flow result
-        """
-        errors: dict[str, str] = {}
-        
-        if user_input is not None:
-            clear_schedules = user_input.get("clear_schedules", False)
-            
-            # Get device info from context
-            ip_address = self.context.get("ip_address")
-            port = self.context.get("port", 30000)
-            ble_mac = self.context.get("ble_mac", "")
-            
-            # If user wants to clear schedules, do it now
-            if clear_schedules:
-                try:
-                    _LOGGER.info("Clearing all manual schedules for %s:%s", ip_address, port)
-                    client = MarstekUDPClient(ip_address, port, timeout=10.0)
-                    results = await client.clear_all_manual_schedules()
-                    _LOGGER.info(
-                        "Cleared schedules: %d/%d slots disabled",
-                        results["success_count"],
-                        results["total_slots"],
-                    )
-                except Exception as err:
-                    _LOGGER.error("Failed to clear schedules: %s", err)
-                    errors["base"] = "clear_failed"
-            
-            if not errors:
-                # Create the config entry
-                return self.async_create_entry(
-                    title=f"Marstek Venus E ({ip_address})",
-                    data={
-                        CONF_IP_ADDRESS: ip_address,
-                        CONF_PORT: port,
-                        CONF_BLE_MAC: ble_mac,
-                    },
-                )
-        
-        schema = vol.Schema(
-            {
-                vol.Optional("clear_schedules", default=False): bool,
-            }
-        )
-        
-        return self.async_show_form(
-            step_id="clear_schedules",
-            data_schema=schema,
-            errors=errors,
-            description_placeholders={
-                "info": "This will disable all 10 time slots (0-9) for manual schedules."
+    def _create_device_entry(self) -> FlowResult:
+        """Create the device without changing its existing schedules."""
+        ip_address = self.context["ip_address"]
+        return self.async_create_entry(
+            title=f"Marstek Venus E ({ip_address})",
+            data={
+                CONF_IP_ADDRESS: ip_address,
+                CONF_PORT: self.context["port"],
+                CONF_BLE_MAC: self.context["ble_mac"],
             },
         )
 
@@ -355,8 +303,8 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
                 try:
                     await coordinator.set_manual_schedule(
                         time_num=time_num,
-                        start_time=user_input.get("start_time"),
-                        end_time=user_input.get("end_time"),
+                        start_time=str(user_input["start_time"])[:5],
+                        end_time=str(user_input["end_time"])[:5],
                         week_set=self._calculate_week_set(user_input.get("days", [])),
                         power=user_input.get("power"),
                         enable=user_input.get("enable", True),
@@ -396,8 +344,8 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
                 ),
                 vol.Required("power", default=0): selector.NumberSelector(
                     selector.NumberSelectorConfig(
-                        min=-10000,
-                        max=10000,
+                        min=-2500,
+                        max=2500,
                         step=100,
                         unit_of_measurement="W",
                         mode=selector.NumberSelectorMode.BOX,

@@ -27,12 +27,14 @@ class MarstekUDPClient:
         self.ip_address = ip_address
         self.port = port
         self.timeout = timeout
+        # The device can drop requests when two callers poll/control it at once.
+        self._request_lock = asyncio.Lock()
 
     def _get_next_id(self) -> int:
         """Get next request ID.
         
-        Note: Marstek device always responds with id: 0 regardless of request ID,
-        so we always use 0 to avoid ID mismatch issues.
+        Keep the request ID at zero for firmware compatibility. Responses may
+        use a different ID; the connected socket isolates each request.
         """
         return 0
 
@@ -50,6 +52,11 @@ class MarstekUDPClient:
             asyncio.TimeoutError: If request times out
             Exception: If device returns error
         """
+        async with self._request_lock:
+            return await self._send_request_locked(method, params)
+
+    async def _send_request_locked(self, method: str, params: dict[str, Any] | None) -> dict[str, Any]:
+        """Retry a request while holding the per-device lock."""
         request_id = self._get_next_id()
         
         # Marstek uses simplified JSON-RPC format (no jsonrpc field)
@@ -65,8 +72,9 @@ class MarstekUDPClient:
         
         max_attempts = 2
         for attempt in range(1, max_attempts + 1):
+            transport = None
             try:
-                loop = asyncio.get_event_loop()
+                loop = asyncio.get_running_loop()
                 transport, protocol = await asyncio.wait_for(
                     loop.create_datagram_endpoint(
                         lambda: _UDPClientProtocol(request_id),
@@ -82,8 +90,6 @@ class MarstekUDPClient:
                     protocol.get_response(), timeout=self.timeout
                 )
                 
-                transport.close()
-                
                 _LOGGER.debug("Received raw response from %s:%d: %s", self.ip_address, self.port, response)
                 
                 if "error" in response:
@@ -92,12 +98,15 @@ class MarstekUDPClient:
                     _LOGGER.error("RPC Error from %s:%d: %s", self.ip_address, self.port, error_msg)
                     raise Exception(f"RPC Error: {error_msg}")
                 
-                result = response.get("result", {})
+                result = response.get("result")
+                if not isinstance(result, dict):
+                    raise ValueError(f"Invalid {method} response: missing result object")
                 _LOGGER.debug("Extracted result from %s:%d: %s", self.ip_address, self.port, result)
                 return result
                 
             except asyncio.TimeoutError:
-                _LOGGER.warning(
+                log = _LOGGER.warning if attempt == max_attempts else _LOGGER.debug
+                log(
                     "Timeout (attempt %d/%d) for method '%s' to %s:%d",
                     attempt,
                     max_attempts,
@@ -107,16 +116,21 @@ class MarstekUDPClient:
                 )
                 if attempt < max_attempts:
                     _LOGGER.debug("Retrying %s...", method)
-                    try:
-                        transport.close()
-                    except Exception:
-                        pass
                     continue
-                _LOGGER.error("Request timeout to %s:%d for method %s", self.ip_address, self.port, method)
                 raise
             except Exception as err:
                 _LOGGER.error("Error communicating with %s:%d - %s", self.ip_address, self.port, err)
                 raise
+            finally:
+                if transport is not None:
+                    transport.close()
+
+    @staticmethod
+    def _require_set_result(method: str, result: dict[str, Any]) -> dict[str, Any]:
+        """A delivered UDP response does not imply the command was applied."""
+        if result.get("set_result") is not True:
+            raise ValueError(f"{method} was not acknowledged by the device: {result}")
+        return result
 
     async def get_device_info(self) -> dict[str, Any]:
         """Get device information.
@@ -165,25 +179,6 @@ class MarstekUDPClient:
             Dictionary containing energy meter status
         """
         return await self._send_request("EM.GetStatus", {"id": 0})
-
-    async def get_schedule(self) -> dict[str, Any]:
-        """Get manual schedule configuration.
-        
-        Returns:
-            Dictionary containing schedule configuration
-        """
-        return await self._send_request("ES.GetSchedule", {"id": 0})
-
-    async def set_schedule(self, schedules: list[dict[str, Any]]) -> dict[str, Any]:
-        """Set complete manual schedule configuration.
-        
-        Args:
-            schedules: List of schedule configurations for all slots
-            
-        Returns:
-            Response from device
-        """
-        return await self._send_request("ES.SetSchedule", {"id": 0, "schedules": schedules})
 
     # Keep old methods for backwards compatibility
     async def get_realtime_data(self) -> dict[str, Any]:
@@ -236,7 +231,8 @@ class MarstekUDPClient:
                 config["passive_cfg"] = passive_cfg
             # If passive_cfg is None, don't add it
         
-        return await self._send_request("ES.SetMode", {"id": 0, "config": config})
+        result = await self._send_request("ES.SetMode", {"id": 0, "config": config})
+        return self._require_set_result("ES.SetMode", result)
 
     async def set_manual_schedule(
         self,
@@ -249,8 +245,8 @@ class MarstekUDPClient:
     ) -> dict[str, Any]:
         """Set manual charging/discharging schedule.
 
-        This method configures a specific schedule slot by retrieving current schedules,
-        modifying the specified slot, and sending the complete configuration.
+        Revision 3.1 writes a single slot with ES.SetMode/manual_cfg. The API
+        has no documented endpoint for reading the other slots.
 
         Args:
             time_num: Time slot number (0-9)
@@ -263,61 +259,19 @@ class MarstekUDPClient:
         Returns:
             Response from device
         """
-        try:
-            # Get current schedule configuration
-            current_config = await self.get_schedule()
-            
-            # Extract schedules array
-            schedules = []
-            if "schedules" in current_config:
-                schedules = current_config["schedules"]
-            elif "manual_cfg" in current_config and isinstance(current_config["manual_cfg"], list):
-                schedules = current_config["manual_cfg"]
-            elif isinstance(current_config, list):
-                schedules = current_config
-            
-            # Ensure we have at least 10 slots (0-9)
-            while len(schedules) < 10:
-                schedules.append({
-                    "time_num": len(schedules),
-                    "start_time": "00:00",
-                    "end_time": "00:00", 
-                    "week_set": 0,
-                    "power": 0,
-                    "enable": 0
-                })
-            
-            # Update the specific slot
-            if 0 <= time_num < len(schedules):
-                schedules[time_num] = {
-                    "time_num": time_num,
-                    "start_time": start_time,
-                    "end_time": end_time,
-                    "week_set": week_set,
-                    "power": power,
-                    "enable": 1 if enable else 0,
-                }
-            
-            # Send complete schedule configuration
-            result = await self.set_schedule(schedules)
-            
-            # Also set mode to Manual to ensure schedules take effect
-            await self.set_mode("Manual")
-            
-            return result
-            
-        except Exception as err:
-            _LOGGER.error("Failed to set manual schedule: %s", err)
-            # Fallback to old method if new approach fails
-            manual_cfg = {
-                "time_num": time_num,
-                "start_time": start_time,
-                "end_time": end_time,
-                "week_set": week_set,
-                "power": power,
-                "enable": 1 if enable else 0,
-            }
-            return await self.set_mode("Manual", manual_cfg=manual_cfg)
+        if not 0 <= time_num <= 9 or not 0 <= week_set <= 127 or abs(power) > 2500:
+            raise ValueError("Invalid manual schedule slot, days, or power")
+        if enable and (not week_set or start_time >= end_time or not power):
+            raise ValueError("Enabled schedule requires days, nonzero power, and end after start")
+        manual_cfg = {
+            "time_num": time_num,
+            "start_time": start_time,
+            "end_time": end_time,
+            "week_set": week_set,
+            "power": power,
+            "enable": int(enable),
+        }
+        return await self.set_mode("Manual", manual_cfg=manual_cfg)
 
     async def set_passive_mode(self, power: int, cd_time: int = 0) -> dict[str, Any]:
         """Set passive mode with power target.
@@ -380,7 +334,8 @@ class MarstekUDPClient:
         """
         enable_value = 0 if enable else 1  # 0 = enable, 1 = disable
         _LOGGER.debug("Setting Bluetooth advertising to %s", "enabled" if enable else "disabled")
-        return await self._send_request("Ble.Adv", {"enable": enable_value})
+        result = await self._send_request("Ble.Adv", {"enable": enable_value})
+        return self._require_set_result("Ble.Adv", result)
 
     async def set_led_ctrl(self, enabled: bool) -> dict[str, Any]:
         """Control LED on the device panel.
@@ -393,7 +348,8 @@ class MarstekUDPClient:
         """
         state = 1 if enabled else 0
         _LOGGER.debug("Setting LED to %s", "on" if enabled else "off")
-        return await self._send_request("Led.Ctrl", {"state": state})
+        result = await self._send_request("Led.Ctrl", {"state": state})
+        return self._require_set_result("Led.Ctrl", result)
 
     @staticmethod
     async def discover(timeout: float = 15.0, port: int = 30000) -> list[tuple[str, int, dict[str, Any]]]:
@@ -619,16 +575,17 @@ class _UDPClientProtocol(asyncio.DatagramProtocol):
         try:
             response = json.loads(data.decode("utf-8"))
             
-            # Marstek device always responds with id: 0, so accept it regardless of request ID
-            # We still check for the expected ID first for compatibility, but fall back to id: 0
-            if response.get("id") == self.expected_id or response.get("id") == 0:
-                self._response_future.set_result(response)
+            # Each request has its own connected UDP socket, which filters the
+            # sender. Some firmware returns id 0, while API examples also show 1.
+            if isinstance(response, dict) and ("result" in response or "error" in response):
+                if not self._response_future.done():
+                    self._response_future.set_result(response)
             else:
-                _LOGGER.warning("Received response with unexpected ID: %s (expected: %s)", 
-                               response.get("id"), self.expected_id)
+                _LOGGER.debug("Ignoring unrelated UDP response: %s", response)
                 
         except json.JSONDecodeError as err:
-            self._response_future.set_exception(err)
+            if not self._response_future.done():
+                self._response_future.set_exception(err)
 
     def error_received(self, exc: Exception) -> None:
         """Handle protocol error.
@@ -636,7 +593,8 @@ class _UDPClientProtocol(asyncio.DatagramProtocol):
         Args:
             exc: Exception that occurred
         """
-        self._response_future.set_exception(exc)
+        if not self._response_future.done():
+            self._response_future.set_exception(exc)
 
     async def get_response(self) -> dict[str, Any]:
         """Wait for and return the response.

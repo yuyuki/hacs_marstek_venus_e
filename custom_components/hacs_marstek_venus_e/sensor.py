@@ -121,7 +121,8 @@ class MarstekSensor(CoordinatorEntity, SensorEntity):
         elif source == "auto" and self.coordinator.data:
             # From ES.GetStatus (automatic updates)
             if attr_path in self.coordinator.data:
-                return self.coordinator.data[attr_path]
+                value = self.coordinator.data[attr_path]
+                return value * self.sensor_config.get("scale", 1) if value is not None else None
         
         return None
 

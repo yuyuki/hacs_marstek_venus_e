@@ -88,7 +88,7 @@ class MarstekClearSchedulesButton(CoordinatorEntity, ButtonEntity):
             )
             
             if results["failed_slots"]:
-                _LOGGER.warning("Failed to disable slots: %s", results["failed_slots"])
+                raise ValueError(f"Failed to disable slots: {results['failed_slots']}")
                 
         except Exception as err:
             _LOGGER.error("Error clearing manual schedules: %s", err)

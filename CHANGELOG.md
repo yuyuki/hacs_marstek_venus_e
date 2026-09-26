@@ -2,6 +2,15 @@
 
 All notable changes to the Marstek Venus E Home Assistant Integration will be documented in this file.
 
+## [2.3.0] - 2026-09-26
+
+- Use the documented API 3.1 `ES.SetMode/manual_cfg` call for manual slots.
+- Keep two UDP timeout attempts, serialize calls per battery, close sockets on every attempt, and check `set_result` for writes.
+- Support optional device, entity, or area targets for control actions, with optional per-battery responses for mode and passive mode.
+- Preserve schedules during setup; clearing them remains an explicit action.
+- Convert the PV total counter from API 3.1 units of 0.01 kWh into Wh. Existing Home Assistant PV statistics may require correction after upgrading.
+- Add the API 3.1 reference, `AGENTS.md`, and device-free reliability tests.
+
 ## [2.2.0] - 2026-04-12
 
 ### Added
